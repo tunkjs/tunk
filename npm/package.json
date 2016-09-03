@@ -1,0 +1,11 @@
+{
+  "name": "vue-flow",
+  "version": "0.3.0",
+  "description": "To make the state of application managed and processed as data flow.",
+  "main": "vue-flow.js",
+  "author": "steven chen <522702986@qq.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
