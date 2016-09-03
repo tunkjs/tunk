@@ -1,9 +1,9 @@
-import {extend, action} from '../vue-reflow';
+import {extend, action} from 'baflow';
 
 
 @extend
 export default class counter {
-
+l
   //不允许异步，应该保持简单
   constructor(){
     this.dispatch({

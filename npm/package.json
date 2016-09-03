@@ -1,8 +1,8 @@
 {
-  "name": "vue-flow",
+  "name": "baflow",
   "version": "0.3.0",
-  "description": "To make the state of application managed and processed as data flow.",
-  "main": "vue-flow.js",
+  "description": "The actions driven state management of application, which can work with vue react or other frameworks",
+  "main": "baflow.js",
   "author": "steven chen <522702986@qq.com>",
   "license": "MIT",
   "scripts": {

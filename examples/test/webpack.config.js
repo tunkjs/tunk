@@ -18,7 +18,11 @@ module.exports = {
         chunkFilename: '[id].bundle.js?[chunkhash]',
     },
     resolve: {
-        extensions: ['', '.js', '.vue']
+        extensions: ['', '.js', '.vue'],
+        alias: {
+            baflow: path.join(__dirname, 'baflow.js'),
+            'baflow-vue':path.join(__dirname, 'baflow-vue.js'),
+        }
     },
     module: {
         loaders: [

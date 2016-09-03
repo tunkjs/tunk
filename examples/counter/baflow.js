@@ -4,21 +4,22 @@ var store = {},
     mixins = {},
     middlewares = [],
     hook_beforeStore = [],
-    hook_beforeFlowIn = [];
+    hook_beforeFlowIn = [],
+    stateUpdateHandlers = [];
 
-var reflow = {
+var baflow = {
     config: {
         cloneMode: 'deep', //deep,shallow
     },
 };
 
 
-reflow.action = function action(target, property, descriptor) {
+baflow.action = function action(target, property, descriptor) {
     target[property]._isAction_ = true;
 }
 
 
-reflow.extend = function (opt) {
+baflow.extend = function (opt) {
     console.log(arguments);
     if (typeof opt === 'function') {
         return extend(opt.name, opt);
@@ -85,13 +86,13 @@ function extend(name, target) {
 };
 
 
-reflow.dispatch = function (modelName, options) {
+baflow.dispatch = function (modelName, options) {
     if (modelName && modelName.constructor === String)
         storeState(options, modelName, 'Vue.flow');
     else throw 'the first argument should be a model name the second shuould be a plain object';
 };
 
-reflow.bind = function (bindName, func) {
+baflow.bind = function (bindName, func) {
     if (typeof func === 'function')
         switch (bindName) {
             case 'beforeStore':
@@ -103,81 +104,96 @@ reflow.bind = function (bindName, func) {
     else throw 'a callback as the second argument is needed';
 };
 
-reflow.addMiddleware = function (middleware) {
+baflow.addMiddleware = function (middleware) {
     if (typeof middleware === 'object' && middleware.constructor === Array)
         middlewares = middlewares.concat(middleware);
     else if (typeof middleware === 'function') middlewares.push(middleware);
 };
 
-reflow.mixin = function (obj) {
+baflow.mixin = function (obj) {
     Object.assign(mixins, obj);
 };
 
 
-reflow.install=function(Vue){
-
-    Vue.mixin({
-
-        init: function () {
-            if (this.$options.state) {
-                for (var x in this.$options.state) if (this.$options.state.hasOwnProperty(x)) {
-                    var statePath = this.$options.state[x].split('.');
+baflow.__ = {
+    connectState:function(targetObject, stateOptions){
+        var initailState = {};
+        if (stateOptions) {
+            for (var x in stateOptions) if (stateOptions.hasOwnProperty(x) ){
+                if(typeof stateOptions[x] === 'string' && stateOptions[x].indexOf('.') > -1) {
+                    var statePath = stateOptions[x].split('.');
                     connections[statePath[0]] = connections[statePath[0]] || [];
                     connections[statePath[0]].push({
-                        comp: this,
+                        comp: targetObject,
                         dataName: x,
                         statePath: statePath,
                     });
 
                     //设置组件默认数据
-                    Vue.util.defineReactive(this, x, pathValue(statePath));
+                    initailState[x] = pathValue(statePath);
+                }else{
+                    throw 'please check the state options of ' + x+':'+stateOptions[x];
                 }
-            }
-
-            if (this.$options.actions) {
-                var action;
-                for (var x in this.$options.actions) if (this.$options.actions.hasOwnProperty(x)) {
-                    action = this.$options.actions[x].split('.');
-                    if (!models[action[0]]) throw 'the model ' + action[0] + ' is not exist';
-                    if (!models[action[0]][action[1]]) throw 'the action ' + action[1] + ' of model ' + action[0] + ' is not exist';
-                    this[x] = (function (modelName, actionName) {
-                        return function () {
-                            if (arguments[0] && arguments[0].cancelBubble !== undefined && arguments[0].srcElement)
-                                models[modelName][actionName].call(models[modelName]);
-                            else apply(models[modelName][actionName], arguments, models[modelName]);
-                        };
-                    })(action[0], action[1]);
-                }
-            }
-        },
-        beforeDestroy: function () {
-            if (this.$options.state) {
-                var statePath, tmp;
-                for (var x in this.$options.state) if (this.$options.state.hasOwnProperty(x)) {
-                    statePath = this.$options.state[x].split('.');
-                    tmp = [];
-                    for (var i = 0, l = connections[statePath[0]].length; i < l; i++) {
-                        if (connections[statePath[0]][i].comp !== this) tmp.push(connections[statePath[0]][i]);
-                    }
-                    connections[statePath[0]] = tmp;
-                }
-            }
-        },
-        methods: {
-            dispatch: function (name, opts) {
-                if (name.indexOf('.') === -1) throw 'please check the argument of $action';
-                else name = name.split('.');
-                if (!models[name[0]]) throw 'the model ' + name[0] + ' is not exist';
-                if (!models[name[0]][name[1]]) throw 'the action ' + name[1] + ' of model ' + name[0] + ' is not exist';
-                apply(models[name[0]][name[1]], Array.prototype.slice.call(arguments, 1), models[name[0]]);
             }
         }
-    });
-}
+        return initailState;
+    },
+    connectActions:function(target, actionOptions){
+        if (actionOptions) {
+            var action;
+            for (var x in actionOptions) if (actionOptions.hasOwnProperty(x)) {
+                if(typeof actionOptions[x] === 'string' && actionOptions[x].indexOf('.') > -1) {
+                    action = actionOptions[x].split('.');
+                    if (!models[action[0]]) throw 'the model ' + action[0] + ' is not exist';
+                    if (!models[action[0]][action[1]]) throw 'the action ' + action[1] + ' of model ' + action[0] + ' is not exist';
+                    target[x] = (function (modelName, actionName) {
+                        return function () {
+                            apply(models[modelName][actionName], arguments, models[modelName]);
+                        };
+                    })(action[0], action[1]);
+                }else{
+                    throw 'please check the action options of ' + x+':'+actionOptions[x];
+                }
+            }
+        }
+
+
+    },
+    connectDispatch:function(target, name){
+        target[name] = function(name, arg1, arg2, arg3){
+            if(typeof name !== 'string' || name.indexOf('.') === -1) throw 'please check the action of '+ name;
+            name = name.split('.');
+            if (!models[name[0]]) throw 'the model ' + name[0] + ' is not exist';
+            if (!models[name[0]][name[1]]) throw 'the action ' + name[1] + ' of model ' + name[0] + ' is not exist';
+            apply(models[name[0]][name[1]], Array.prototype.slice.call(arguments, 1), models[name[0]]);
+        }
+    },
+
+    disconnect:function(target, stateOptions, actionOptions){
+        if (stateOptions) {
+            var statePath, tmp;
+            for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
+                statePath = stateOptions[x].split('.');
+                tmp = [];
+                for (var i = 0, l = connections[statePath[0]].length; i < l; i++) {
+                    if (connections[statePath[0]][i].comp !== target) tmp.push(connections[statePath[0]][i]);
+                }
+                connections[statePath[0]] = tmp;
+            }
+        }
+    },
+
+    //function(targetObject, stateName, newValue, action)
+    addStateUpdatedListener:function(handler) {
+        stateUpdateHandlers.push(handler);
+    }
+
+
+};
 
 
 
-reflow.mixin({
+baflow.mixin({
 
     each: function (obj, cb) {
         if (typeof obj === 'object') {
@@ -266,10 +282,8 @@ function storeState(obj, modelName, actionName) {
         // 数据流入前hook
         run_beforeFlowIn_hooks(pipes[i].comp, meta);
 
-        if (pipes[i].comp.$options.beforeFlowIn)
-            pipes[i].comp.$options.beforeFlowIn.call(pipes[i].comp, meta);
-
-        pipes[i].comp.$set(pipes[i].dataName, pathValue_);
+        for(var i=0;i<stateUpdateHandlers.length;i++)
+            stateUpdateHandlers[i](pipes[i].comp, pipes[i].dataName, pathValue_, modelName + '.' + actionName);
 
     }
 
@@ -317,7 +331,7 @@ function pathValue(statePath) {
 
 function clone(obj) {
     if (typeof obj === 'object')
-        return reflow.config.cloneMode === 'deep' ?
+        return baflow.config.cloneMode === 'deep' ?
             JSON.parse(JSON.stringify(obj)) :
             ( obj.constructor === Array ? obj.slice() : Object.assign({}, obj) );
     else return obj;
@@ -348,11 +362,11 @@ function apply(func, args, context) {
 
 
 if (typeof module === 'object' && module.exports) {
-    module.exports = reflow;
+    module.exports = baflow;
 }
 else if (typeof define === 'function' && define.amd) {
     define(function () {
-        return reflow;
+        return baflow;
     })
 }
 
