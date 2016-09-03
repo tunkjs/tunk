@@ -7,45 +7,56 @@
 
 <script>
 
-import Vue from 'vue';
+import {extend, action} from 'baflow';
 
-Vue.flow.model('request',{
-    default:{
-        t: '',
-    },
-	test_jsonp: function(){
+
+@extend
+class request {
+    constructor(){
+		this.dispatch({
+			t: '',
+		});
+    }
+    @action
+	test_jsonp(){
 		var self = this;
 		var jsonp = this.jsonp('http://search.lefeng.com/ajax/getHotKeys',function(v){if(v.data) self.dispatch({t:'jsonp'});});
-	},
-	test_jsonp_promise: async function(){
+	}
+	@action
+	async test_jsonp_promise (){
 		var jsonp = await this.jsonp('http://search.lefeng.com/ajax/getHotKeys',function(v){});
 		if(jsonp.data) return {t:'jsonp_promise'};
-	},
-	test_jsonp_abort: function(){
+	}
+	@action
+	test_jsonp_abort(){
 		var self = this;
 		var jsonp = this.jsonp('http://search.lefeng.com/ajax/getHotKeys',function(v){},function(e){
 			//console.log('test_jsonp_abort',arguments);
 			self.dispatch({t:'jsonp_abort'});
 		});
 		jsonp.xhr.abort();
-	},
-	test_json: function(){
+	}
+	@action
+	test_json(){
 		var self = this;
 		var json = this.getJson('http://search.lefeng.com/ajax/getHotKeys',function(v){if(v.data) self.dispatch({t:'json'});});
-	},
-	test_json_promise: async function(){
+	}
+	@action
+	async test_json_promise (){
 		var json = await this.getJson('http://search.lefeng.com/ajax/getHotKeys',function(v){});
 		if(json.data) return {t:'json_promise'};
-	},
-	test_json_abort: function(){
+	}
+	@action
+	test_json_abort(){
 		var self = this;
 		var json = this.getJson('http://search.lefeng.com/ajax/getHotKeys',function(v){},function(e){
 			//console.log('test_json_abort',arguments);
 			self.dispatch({t:'json_abort'});
 		});
 		json.xhr.abort();
-	},
-	test_$request_model: function(){
+	}
+	@action
+	test_$request_model(){
 		var self = this;
 		var json = this.request({
 			url:'http://search.lefeng.com/ajax/getHotKeys',
@@ -63,12 +74,12 @@ Vue.flow.model('request',{
 				},2000);
 			},
 		});
-	},
+	}
 
-});
+}
 
 export default {
-	flow:{
+	state:{
 		t:'request.t',
 		p:'$request.pending',
 		q:'$request.queue'

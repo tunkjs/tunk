@@ -1,6 +1,6 @@
 ;(function(){
 
-    var Vue = require('vue');
+    var baflow = require('baflow');
 
     var jsonpID = +new Date(),
         document = window.document,
@@ -20,19 +20,26 @@
 
 
     function request_init(opts){
+
         maxQueueLength=opts&&opts.maxQueueLength?opts.maxQueueLength:100;
-        Vue.flow.model('$request',{
-            default:{
+
+        function $request(){
+            this.dispatch({
                 pending: true,
                 queue:[],//{status,...extra,id:''}
-            },
-			remove:function(id){
-				var queue = this.getState().queue,queu=[];
-				for(var i=0,l=queue.length;i<l;i++)
-					if(queue[i].id!==id) queu.push(queue[i]);
-				return {queue:queu};
-			}
-        });
+            });
+        }
+
+        $request.prototype.remove = function (id){
+            var queue = this.getState().queue,queu=[];
+            for(var i=0,l=queue.length;i<l;i++)
+                if(queue[i].id!==id) queu.push(queue[i]);
+            return {queue:queu};
+        };
+
+        baflow.action($request.prototype,'remove');
+        baflow.extend($request);
+
         return request;
     }
 
@@ -48,8 +55,8 @@
         if(queue.length==maxQueueLength) queue.pop();
         queue.unshift(settings.extra);
 
-        Vue.flow.dispatch('$request', {queue:queue});
-        Vue.flow.dispatch('$request', {pending:true});
+        baflow.dispatch('$request', {queue:queue});
+        baflow.dispatch('$request', {pending:true});
 
         if (!settings.crossDomain) {
             urlAnchor = document.createElement('a');
@@ -180,8 +187,8 @@
         settings.success(data, status, xhr);
         if (resolve) resolve(data);
         settings.extra.status ='success';
-        Vue.flow.dispatch('$request', {queue:queue});
-        Vue.flow.dispatch('$request', {pending:getPending()});
+        baflow.dispatch('$request', {queue:queue});
+        baflow.dispatch('$request', {pending:getPending()});
         ajaxComplete(status, xhr, settings);
     }
 
@@ -190,8 +197,8 @@
         settings.error( xhr, type, error);
         settings.extra.status ='error';
         settings.extra.errorType =type;
-        Vue.flow.dispatch('$request', {queue:queue});
-        Vue.flow.dispatch('$request', {pending:getPending()});
+        baflow.dispatch('$request', {queue:queue});
+        baflow.dispatch('$request', {pending:getPending()});
         //console.log('@@@ajaxError',error,type,settings,xhr);
         ajaxComplete(type, xhr, settings);
     }

@@ -6,9 +6,9 @@
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
-Vue.flow.model('promise',{
+baflow.model('promise',{
 	
 	default:{
 		t:'default',
@@ -69,7 +69,7 @@ export default {
 	},
 
 	ready(){
-        this.$action('promise.test_define');
+        this.dispatch('promise.test_define');
 	}
     
 }

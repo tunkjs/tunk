@@ -5,9 +5,9 @@
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
-Vue.flow.model('function',{
+baflow.model('function',{
 	
 	default:{
 		t:'default',
@@ -54,8 +54,8 @@ export default {
 	},
 
 	ready(){
-        this.$action('function.test_dispatch');
-		this.$action('function.test_return','return');
+        this.dispatch('function.test_dispatch');
+		this.dispatch('function.test_return','return');
 	}
     
 }

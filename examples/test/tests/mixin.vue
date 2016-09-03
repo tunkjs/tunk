@@ -8,29 +8,33 @@
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
 //beforeStore beforeFlowIn
-Vue.flow.bind('beforeStore',function(newState,oldState){
+baflow.bind('beforeStore',function(newState,oldState){
 	console.log('test:beforeStore',JSON.parse(JSON.stringify({newState,oldState})));
 });
 
-Vue.flow.bind('beforeStore',function(newState,oldState){
+baflow.bind('beforeStore',function(newState,oldState){
 	console.log('test2:beforeStore');
 });
 
-Vue.flow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeFlowIn',function(meta){
 	console.log('test:beforeFlowIn',{meta,comp:this});
 });
-Vue.flow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeFlowIn',function(meta){
 	console.log('test2:beforeFlowIn');
 });
 
-Vue.flow.model('bind',{
-    default:{
-        count: 0,
-    },
-    click:function(opt){
+@extend
+class bind {
+    constructor(){
+        this.dispatch({
+            count:0
+        });
+    }
+    @action
+    click(opt){
 		return {count:this.getState().count+1};
     },
 });

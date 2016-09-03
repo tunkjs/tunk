@@ -4,9 +4,9 @@
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
-Vue.flow.model('options',{
+baflow.model('options',{
 	
 	default:{
 		t:'default',
@@ -78,11 +78,11 @@ export default {
 			this.test_dispatch();
 		},200);
 		setTimeout(()=>{
-			this.$action('options.test_action');
+			this.dispatch('options.test_action');
 		},100);
 
 		setTimeout(()=>{
-			this.$action('options.test_action_multi_options','1','2');
+			this.dispatch('options.test_action_multi_options','1','2');
 		},100);
 	}
     

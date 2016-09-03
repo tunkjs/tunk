@@ -5,9 +5,9 @@
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
-Vue.flow.model('cookie',{
+baflow.model('cookie',{
     default:{
         t: '',
     },

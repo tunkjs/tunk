@@ -1,34 +1,38 @@
 <template>
-  <test title="Vue.flow.bind 事件绑定" :units='units'>
+  <test title="baflow.bind 事件绑定" :units='units'>
 	  Test : Mixin {{ count }}
   </test>
 </template>
 
 <script>
 
-import Vue from 'vue';
+import baflow from 'baflow';
 
 //beforeStore beforeFlowIn
-Vue.flow.bind('beforeStore',function(newState,oldState){
+baflow.bind('beforeStore',function(newState,oldState){
 	//console.log('test:beforeStore',JSON.parse(JSON.stringify({newState,oldState})));
 });
 
-Vue.flow.bind('beforeStore',function(newState,oldState){
+baflow.bind('beforeStore',function(newState,oldState){
 	//console.log('test2:beforeStore');
 });
 
-Vue.flow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeFlowIn',function(meta){
 	
 });
-Vue.flow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeFlowIn',function(meta){
 	
 });
 
-Vue.flow.model('bind',{
-    default:{
-        count: 0,
-    },
-    click:function(opt){
+@extend
+class bind {
+    constructor(){
+        this.dispatch({
+            count:0
+        });
+    }
+    @action
+    click(opt){
 		return {count:this.getState().count+1};
     },
 });

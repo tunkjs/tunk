@@ -6,40 +6,44 @@
 
 <script>
 
-import Vue from 'vue';
+import {extend, action} from 'baflow';
 
-Vue.flow.model('options',{
+@extend
+class options {
 	
-	default:{
-		t:'default',
-	},
+	constructor(){
 
-    test_dispatched:function(){
+		this.dispatch({t:'default',});
+
+	}
+	@action
+    test_dispatched (){
 		return {t:'dispatched'}
-    },
-
-	test_action_multi_options:function(a,b){
+    }
+    @action
+	test_action_multi_options (a,b){
 		this.dispatch('options.test_dispatch_multi_options',a,b);
 		return {t:a+'+'+b};
-    },
-	test_dispatch_multi_options:function(a,b){
+    }
+    @action
+	test_dispatch_multi_options (a,b){
 
 		return {t:a+'-'+b};
-    },
-
-	test_dispatch:function(){
+    }
+    @action
+	test_dispatch (){
 		this.dispatch('test_dispatched')
-    },
-
+    }
+	@action
 	test_action(){
 		this.dispatch({t:'action'});
 	}
 
 
-});
+}
 
 export default {
-    flow: {
+    state: {
       t: 'options.t'
     },
 	data(){
@@ -61,10 +65,10 @@ export default {
 		test:require('./base.vue'),
 	},
 
-	beforeFlowIn(meta){
-		console.log(meta.value);
+	beforeFlowIn(stateName, value, action){
+		console.log('beforeFlowIn(stateName, value, action)',value);
 		this.$set('units.beforeFlowIn',true);
-		switch(meta.value){
+		switch(value){
 			case'action':
 			this.$set('units.this_action',true);
 			break;
@@ -81,7 +85,7 @@ export default {
 				this.$set('units.inject_action_multi_options',true);
 				break;
 		}
-		if(meta.action=='options.test_dispatched'){
+		if(action=='options.test_dispatched'){
 			this.$set('units.dispatch',true);
 		}
 	},
@@ -98,11 +102,11 @@ export default {
 			this.test_dispatch();
 		},200);
 		setTimeout(()=>{
-			this.$action('options.test_action');
+			this.dispatch('options.test_action');
 		},100);
 
 		setTimeout(()=>{
-			this.$action('options.test_action_multi_options','1','2');
+			this.dispatch('options.test_action_multi_options','1','2');
 		},400);
 	}
     

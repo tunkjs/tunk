@@ -9,9 +9,9 @@ import cookie from "./mixin/cookie/vue-flow-cookie-mixin";
 
 Vue.use(baflow);
 
-Vue.flow.addMiddleware([actionMiddleware, functionMiddleware, promiseMiddleware]);
-Vue.flow.mixin(request());
-Vue.flow.mixin(cookie);
+baflow.addMiddleware([actionMiddleware, functionMiddleware, promiseMiddleware]);
+baflow.mixin(request());
+baflow.mixin(cookie);
 
 new Vue({
     el: 'body',
