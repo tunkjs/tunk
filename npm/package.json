@@ -1,8 +1,8 @@
 {
-  "name": "baflow",
-  "version": "0.3.0",
-  "description": "The actions driven state management of application, which can work with vue react or other frameworks",
-  "main": "baflow.js",
+  "name": "tunk",
+  "version": "1.1.0",
+  "description": "The action driven state management of application, which work as data center with vue react or other frameworks",
+  "main": "tunk.js",
   "author": "steven chen <522702986@qq.com>",
   "license": "MIT",
   "scripts": {
