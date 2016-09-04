@@ -7,19 +7,19 @@ var store = {},
 	hook_beforeFlowIn = [],
 	stateUpdateHandlers = [];
 
-var baflow = {
+var tunk = {
 	config: {
 		cloneMode: 'deep', //deep,shallow
 	},
 };
 
 
-baflow.action = function action(target, property, descriptor) {
+tunk.action = function action(target, property, descriptor) {
 	target[property]._isAction_ = true;
 }
 
 
-baflow.extend = function (opt) {
+tunk.extend = function (opt) {
 	console.log(arguments);
 	if (typeof opt === 'function') {
 		return extend(opt.name, opt);
@@ -86,13 +86,13 @@ function extend(name, target) {
 };
 
 
-baflow.dispatch = function (modelName, options) {
+tunk.dispatch = function (modelName, options) {
 	if (modelName && modelName.constructor === String)
-		storeState(options, modelName, 'Vue.flow');
+		storeState(options, modelName, 'tunk');
 	else throw 'the first argument should be a model name the second shuould be a plain object';
 };
 
-baflow.bind = function (bindName, func) {
+tunk.bind = function (bindName, func) {
 	if (typeof func === 'function')
 		switch (bindName) {
 			case 'beforeStore':
@@ -104,18 +104,18 @@ baflow.bind = function (bindName, func) {
 	else throw 'a callback as the second argument is needed';
 };
 
-baflow.addMiddleware = function (middleware) {
+tunk.addMiddleware = function (middleware) {
 	if (typeof middleware === 'object' && middleware.constructor === Array)
 		middlewares = middlewares.concat(middleware);
 	else if (typeof middleware === 'function') middlewares.push(middleware);
 };
 
-baflow.mixin = function (obj) {
+tunk.mixin = function (obj) {
 	Object.assign(mixins, obj);
 };
 
 
-baflow.__ = {
+tunk.__ = {
 	connectState:function(targetObject, stateOptions){
 		var initailState = {};
 		if (stateOptions) {
@@ -193,7 +193,7 @@ baflow.__ = {
 
 
 
-baflow.mixin({
+tunk.mixin({
 
 	each: function (obj, cb) {
 		if (typeof obj === 'object') {
@@ -331,7 +331,7 @@ function pathValue(statePath) {
 
 function clone(obj) {
 	if (typeof obj === 'object')
-		return baflow.config.cloneMode === 'deep' ?
+		return tunk.config.cloneMode === 'deep' ?
 			JSON.parse(JSON.stringify(obj)) :
 			( obj.constructor === Array ? obj.slice() : Object.assign({}, obj) );
 	else return obj;
@@ -362,11 +362,11 @@ function apply(func, args, context) {
 
 
 if (typeof module === 'object' && module.exports) {
-	module.exports = baflow;
+	module.exports = tunk;
 }
 else if (typeof define === 'function' && define.amd) {
 	define(function () {
-		return baflow;
+		return tunk;
 	})
 }
 
