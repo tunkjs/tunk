@@ -152,10 +152,10 @@
 
 		},
 		setDispatchMethod: function (target, name, makeDispatch) {
-			target[name] = makeDispatch(function (moduleName, actionName) {
+			target[name] = makeDispatch(function (moduleName, actionName, argsArray) {
 				if (!modules[moduleName]) throw 'unknow module name:' + moduleName + '.';
 				if (!modules[moduleName][actionName]) throw 'unknow action name:' + actionName + ' of module:' + moduleName + '';
-				apply(modules[moduleName][actionName], Array.prototype.slice.call(arguments, 2), modules[moduleName]);
+				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 			});
 		},
 
@@ -271,8 +271,8 @@
 			// 数据流入前hook
 			run_beforeFlowIn_hooks(pipes[i].comp, meta);
 
-			for (var i = 0; i < stateUpdateHandlers.length; i++)
-				stateUpdateHandlers[i](pipes[i].comp, pipes[i].dataName, pathValue_, moduleName + '.' + actionName);
+			for (var j = 0; j < stateUpdateHandlers.length; j++)
+				stateUpdateHandlers[j](pipes[i].comp, pipes[i].dataName, pathValue_, moduleName + '.' + actionName);
 
 		}
 
