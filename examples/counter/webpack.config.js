@@ -18,7 +18,8 @@ module.exports = {
         chunkFilename: '[id].bundle.js?[chunkhash]',
     },
     resolve: {
-        extensions: ['', '.js', '.vue']
+        extensions: ['', '.js', '.vue'],
+
     },
     module: {
         loaders: [
