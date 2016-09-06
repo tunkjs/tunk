@@ -1,4 +1,7 @@
 (function() {
+
+	var apply = require('apply.js');
+
 	var store = {},
 		modules = {},
 		connections = [],
@@ -6,13 +9,14 @@
 		middlewares = [],
 		hook_beforeStore = [],
 		hook_beforeFlowIn = [],
-		stateUpdateHandlers = [];
+		stateUpdateHandlers = [],
+		configs={
+			cloneMode: 'deep', //deep, shallow, none
+			async:false,
+			debug:false
+		};
 
-	var tunk = {
-		config: {
-			cloneMode: 'deep', //deep,shallow
-		},
-	};
+	var tunk = {};
 
 
 	tunk.action = function action(target, property, descriptor) {
@@ -60,11 +64,17 @@
 			if (protos[x] && protos[x]._isAction_)
 				protos[x] = (function (moduleName, actionName, originAction) {
 
-					protos.dispatch = dispatch;
-
-					return function () {
-						var result = apply(originAction, arguments, modules[moduleName]);
-						if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+					return function _action_() {
+						if(configs.async){
+							var args = arguments;
+							setTimeout(function(){
+								var result = apply(originAction, args, modules[moduleName]);
+								if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+							},0);
+						}else{
+							var result = apply(originAction, arguments, modules[moduleName]);
+							if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+						}
 					};
 
 					function dispatch() {
@@ -76,6 +86,17 @@
 						}, dispatch);
 					}
 				})(name, x, protos[x]);
+		}
+
+		protos.dispatch = dispatch;
+
+		function dispatch() {
+			return run_middlewares(this, arguments, {
+				moduleName: name,
+				actionName: 'dispatch',
+				modules: modules,
+				store: store,
+			}, dispatch);
 		}
 
 		store[name] = {};
@@ -115,6 +136,10 @@
 		Object.assign(mixins, obj);
 	};
 
+	tunk.config = function (obj) {
+		Object.assign(configs, obj);
+	};
+
 
 	tunk.connectionApi = {
 		connectState: function (targetObject, stateOptions) {
@@ -140,8 +165,9 @@
 				var action;
 				for (var x in actionOptions) if (actionOptions.hasOwnProperty(x)) {
 					action = actionOptions[x];
-					if (!modules[action[0]]) throw 'unknow module name:' + action[0];
-					if (!modules[action[0]][action[1]]) throw 'unknow action name:' + action[1] + ' of module:' + action[0];
+					if (!modules[action[0]]) throw 'unknown module name ' + action[0];
+					if (!modules[action[0]][action[1]]) throw 'unknown action name ' + action[1] + ' of ' + action[0];
+					if(modules[action[0]][action[1]].name !== '_action_') throw 'the method '+action[1]+' of '+action[0]+' is not an action';
 					target[x] = (function (moduleName, actionName) {
 						return function () {
 							apply(modules[moduleName][actionName], arguments, modules[moduleName]);
@@ -152,10 +178,12 @@
 
 		},
 		setDispatchMethod: function (target, name, makeDispatch) {
-			target[name] = makeDispatch(function (moduleName, actionName) {
-				if (!modules[moduleName]) throw 'unknow module name:' + moduleName + '.';
-				if (!modules[moduleName][actionName]) throw 'unknow action name:' + actionName + ' of module:' + moduleName + '';
-				apply(modules[moduleName][actionName], Array.prototype.slice.call(arguments, 2), modules[moduleName]);
+			target[name] = makeDispatch(function (moduleName, actionName, argsArray) {
+				if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
+				if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
+				if(modules[moduleName][actionName].name !== '_action_') throw 'the method '+actionName+' of '+moduleName+' is not an action';
+
+				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 			});
 		},
 
@@ -271,8 +299,8 @@
 			// 数据流入前hook
 			run_beforeFlowIn_hooks(pipes[i].comp, meta);
 
-			for (var i = 0; i < stateUpdateHandlers.length; i++)
-				stateUpdateHandlers[i](pipes[i].comp, pipes[i].dataName, pathValue_, moduleName + '.' + actionName);
+			for (var j = 0; j < stateUpdateHandlers.length; j++)
+				stateUpdateHandlers[j](pipes[i].comp, pipes[i].dataName, pathValue_, moduleName + '.' + actionName);
 
 		}
 
@@ -320,31 +348,10 @@
 
 	function clone(obj) {
 		if (typeof obj === 'object')
-			return tunk.config.cloneMode === 'deep' ?
+			return configs.cloneMode === 'deep' ?
 				JSON.parse(JSON.stringify(obj)) :
 				( obj.constructor === Array ? obj.slice() : Object.assign({}, obj) );
 		else return obj;
-	}
-
-	function apply(func, args, context) {
-		switch (args.length) {
-			case 0:
-				return context ? func.call(context) : func();
-			case 1:
-				return context ? func.call(context, args[0]) : func(args[0]);
-			case 2:
-				return context ? func.call(context, args[0], args[1]) : func(args[0], args[1]);
-			case 3:
-				return context ? func.call(context, args[0], args[1], args[2]) : func(args[0], args[1], args[2]);
-			case 4:
-				return context ? func.call(context, args[0], args[1], args[2], args[3]) : func(args[0], args[1], args[2], args[3]);
-			case 5:
-				return context ? func.call(context, args[0], args[1], args[2], args[3], args[4]) : func(args[0], args[1], args[2], args[3], args[4]);
-			default:
-				return func.apply(context || this, args);
-
-		}
-
 	}
 
 

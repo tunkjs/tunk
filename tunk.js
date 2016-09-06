@@ -1,4 +1,7 @@
 (function() {
+
+	var apply = require('apply.js');
+
 	var store = {},
 		modules = {},
 		connections = [],
@@ -62,7 +65,7 @@
 
 					protos.dispatch = dispatch;
 
-					return function () {
+					return function _action_() {
 						var result = apply(originAction, arguments, modules[moduleName]);
 						if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
 					};
@@ -140,8 +143,9 @@
 				var action;
 				for (var x in actionOptions) if (actionOptions.hasOwnProperty(x)) {
 					action = actionOptions[x];
-					if (!modules[action[0]]) throw 'unknow module name:' + action[0];
-					if (!modules[action[0]][action[1]]) throw 'unknow action name:' + action[1] + ' of module:' + action[0];
+					if (!modules[action[0]]) throw 'unknown module name ' + action[0];
+					if (!modules[action[0]][action[1]]) throw 'unknown action name ' + action[1] + ' of ' + action[0];
+					if(modules[action[0]][action[1]].name !== '_action_') throw 'the method '+action[1]+' of '+action[0]+' is not an action';
 					target[x] = (function (moduleName, actionName) {
 						return function () {
 							apply(modules[moduleName][actionName], arguments, modules[moduleName]);
@@ -153,8 +157,9 @@
 		},
 		setDispatchMethod: function (target, name, makeDispatch) {
 			target[name] = makeDispatch(function (moduleName, actionName, argsArray) {
-				if (!modules[moduleName]) throw 'unknow module name:' + moduleName + '.';
-				if (!modules[moduleName][actionName]) throw 'unknow action name:' + actionName + ' of module:' + moduleName + '';
+				if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
+				if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
+				if(modules[moduleName][actionName].name !== '_action_') throw 'the method '+actionName+' of '+moduleName+' is not an action';
 				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 			});
 		},
@@ -324,27 +329,6 @@
 				JSON.parse(JSON.stringify(obj)) :
 				( obj.constructor === Array ? obj.slice() : Object.assign({}, obj) );
 		else return obj;
-	}
-
-	function apply(func, args, context) {
-		switch (args.length) {
-			case 0:
-				return context ? func.call(context) : func();
-			case 1:
-				return context ? func.call(context, args[0]) : func(args[0]);
-			case 2:
-				return context ? func.call(context, args[0], args[1]) : func(args[0], args[1]);
-			case 3:
-				return context ? func.call(context, args[0], args[1], args[2]) : func(args[0], args[1], args[2]);
-			case 4:
-				return context ? func.call(context, args[0], args[1], args[2], args[3]) : func(args[0], args[1], args[2], args[3]);
-			case 5:
-				return context ? func.call(context, args[0], args[1], args[2], args[3], args[4]) : func(args[0], args[1], args[2], args[3], args[4]);
-			default:
-				return func.apply(context || this, args);
-
-		}
-
 	}
 
 
