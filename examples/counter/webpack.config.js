@@ -19,6 +19,9 @@ module.exports = {
     },
     resolve: {
         extensions: ['', '.js', '.vue'],
+        alias:{
+            tunk:__dirname + '/tunk',
+        }
 
     },
     module: {

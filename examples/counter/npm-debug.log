@@ -621,8 +621,8 @@
 612 info package.json date-now@0.1.4 No license field.
 613 info package.json deep-is@0.1.3 license should be a valid SPDX license expression
 614 info package.json diff@1.4.0 No license field.
-615 info package.json domhandler@2.3.0 No license field.
-616 info package.json domelementtype@1.3.0 No license field.
+615 info package.json domelementtype@1.3.0 No license field.
+616 info package.json domhandler@2.3.0 No license field.
 617 info package.json domutils@1.5.1 No license field.
 618 info package.json enhanced-resolve@2.2.2 No license field.
 619 info package.json entities@1.1.1 license should be a valid SPDX license expression
@@ -643,8 +643,8 @@
 634 info package.json jade@0.26.3 No license field.
 635 info package.json js-base64@2.1.9 license should be a valid SPDX license expression
 636 info package.json jsbn@0.1.0 license should be a valid SPDX license expression
-637 info package.json jsesc@0.5.0 No license field.
-638 info package.json json-schema@0.2.2 No license field.
+637 info package.json json-schema@0.2.2 No license field.
+638 info package.json jsesc@0.5.0 No license field.
 639 info package.json longest@1.0.1 license should be a valid SPDX license expression
 640 info package.json mime@1.3.4 No license field.
 641 info package.json ms@0.7.1 No license field.
@@ -668,18 +668,18 @@
 659 info package.json source-map-support@0.2.10 No license field.
 660 info package.json string_decoder@0.10.31 string_decoder is also the name of a node core module.
 661 info package.json timers-browserify@1.4.2 No license field.
-662 info package.json tweetnacl@0.13.3 license should be a valid SPDX license expression
-663 info package.json url@0.10.3 url is also the name of a node core module.
-664 info package.json util@0.10.3 util is also the name of a node core module.
-665 info package.json utils-merge@1.0.0 No license field.
-666 info package.json verror@1.3.6 No license field.
-667 info package.json vue-flow@0.2.3 No repository field.
-668 info package.json vue-html-loader@1.2.3 No license field.
-669 info package.json webpack-dev-middleware@1.6.1 No license field.
-670 info package.json window-size@0.1.0 No license field.
-671 info package.json tunk@1.1.3 No repository field.
-672 info package.json tunk-action-middleware@0.3.1 No repository field.
-673 info package.json tunk-vue@0.3.1 No repository field.
+662 info package.json tunk-vue@0.3.3 No repository field.
+663 info package.json tweetnacl@0.13.3 license should be a valid SPDX license expression
+664 info package.json url@0.10.3 url is also the name of a node core module.
+665 info package.json util@0.10.3 util is also the name of a node core module.
+666 info package.json utils-merge@1.0.0 No license field.
+667 info package.json verror@1.3.6 No license field.
+668 info package.json vue-flow@0.2.3 No repository field.
+669 info package.json vue-html-loader@1.2.3 No license field.
+670 info package.json webpack-dev-middleware@1.6.1 No license field.
+671 info package.json window-size@0.1.0 No license field.
+672 info package.json tunk@1.1.3 No repository field.
+673 info package.json tunk-action-middleware@0.3.1 No repository field.
 674 verbose readDependencies loading dependencies from D:\tunk\tunk\examples\counter\package.json
 675 verbose install apply.js is installed as 1.0.0
 676 silly cache add args [ 'apply.js', null ]
@@ -701,22 +701,22 @@
 686 verbose addNameTag registry:https://registry.npm.taobao.org/apply.js not in flight; fetching
 687 verbose request uri https://registry.npm.taobao.org/apply.js
 688 verbose request no auth needed
-689 info attempt registry request try #1 at 23:30:30
-690 verbose request id 9eb2332390c2668b
+689 info attempt registry request try #1 at 00:21:49
+690 verbose request id ebda544409b02b4b
 691 verbose etag "a60-yoiYq5uK8WLmZC5K6ChoNQ"
 692 http request GET https://registry.npm.taobao.org/apply.js
 693 http 304 https://registry.npm.taobao.org/apply.js
-694 verbose headers { date: 'Tue, 06 Sep 2016 15:30:35 GMT',
+694 verbose headers { date: 'Tue, 06 Sep 2016 16:21:54 GMT',
 694 verbose headers   connection: 'keep-alive',
 694 verbose headers   'x-current-requests': '1',
 694 verbose headers   etag: '"a60-yoiYq5uK8WLmZC5K6ChoNQ"',
-694 verbose headers   'x-readtime': '15' }
+694 verbose headers   'x-readtime': '17' }
 695 silly get cb [ 304,
-695 silly get   { date: 'Tue, 06 Sep 2016 15:30:35 GMT',
+695 silly get   { date: 'Tue, 06 Sep 2016 16:21:54 GMT',
 695 silly get     connection: 'keep-alive',
 695 silly get     'x-current-requests': '1',
 695 silly get     etag: '"a60-yoiYq5uK8WLmZC5K6ChoNQ"',
-695 silly get     'x-readtime': '15' } ]
+695 silly get     'x-readtime': '17' } ]
 696 verbose etag https://registry.npm.taobao.org/apply.js from cache
 697 verbose get saving apply.js to C:\Users\steven\.cnpm\registry.npm.taobao.org\apply.js\.cache.json
 698 silly addNameTag next cb for apply.js with tag latest

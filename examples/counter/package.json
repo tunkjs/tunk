@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "vue": "^1.0.21",
-    "tunk":"",
     "tunk-vue":"",
     "tunk-action-middleware":"",
     "apply.js":""

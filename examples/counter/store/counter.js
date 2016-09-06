@@ -1,4 +1,4 @@
-import {extend, action} from '../tunk';
+import {extend, action} from 'tunk';
 
 
 @extend

@@ -9,13 +9,14 @@
 		middlewares = [],
 		hook_beforeStore = [],
 		hook_beforeFlowIn = [],
-		stateUpdateHandlers = [];
+		stateUpdateHandlers = [],
+		configs={
+			cloneMode: 'deep', //deep, shallow, none
+			async:false,
+			debug:false
+		};
 
-	var tunk = {
-		config: {
-			cloneMode: 'deep', //deep,shallow
-		},
-	};
+	var tunk = {};
 
 
 	tunk.action = function action(target, property, descriptor) {
@@ -63,11 +64,17 @@
 			if (protos[x] && protos[x]._isAction_)
 				protos[x] = (function (moduleName, actionName, originAction) {
 
-					protos.dispatch = dispatch;
-
 					return function _action_() {
-						var result = apply(originAction, arguments, modules[moduleName]);
-						if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+						if(configs.async){
+							var args = arguments;
+							setTimeout(function(){
+								var result = apply(originAction, args, modules[moduleName]);
+								if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+							},0);
+						}else{
+							var result = apply(originAction, arguments, modules[moduleName]);
+							if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+						}
 					};
 
 					function dispatch() {
@@ -79,6 +86,17 @@
 						}, dispatch);
 					}
 				})(name, x, protos[x]);
+		}
+
+		protos.dispatch = dispatch;
+
+		function dispatch() {
+			return run_middlewares(this, arguments, {
+				moduleName: name,
+				actionName: 'dispatch',
+				modules: modules,
+				store: store,
+			}, dispatch);
 		}
 
 		store[name] = {};
@@ -116,6 +134,10 @@
 
 	tunk.mixin = function (obj) {
 		Object.assign(mixins, obj);
+	};
+
+	tunk.config = function (obj) {
+		Object.assign(configs, obj);
 	};
 
 
@@ -160,6 +182,7 @@
 				if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
 				if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
 				if(modules[moduleName][actionName].name !== '_action_') throw 'the method '+actionName+' of '+moduleName+' is not an action';
+
 				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 			});
 		},
@@ -325,7 +348,7 @@
 
 	function clone(obj) {
 		if (typeof obj === 'object')
-			return tunk.config.cloneMode === 'deep' ?
+			return configs.cloneMode === 'deep' ?
 				JSON.parse(JSON.stringify(obj)) :
 				( obj.constructor === Array ? obj.slice() : Object.assign({}, obj) );
 		else return obj;
