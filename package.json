@@ -1,6 +1,6 @@
 {
   "name": "tunk",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "The action driven state management of application, which work as data center with vue,react or other frameworks",
   "keywords": [
     "tunk",

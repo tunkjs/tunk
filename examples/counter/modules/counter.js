@@ -1,7 +1,7 @@
 import {extend, action} from 'tunk';
 
 
-@extend
+@extend({isolate:'none'})
 export default class counter {
   //不允许异步，应该保持简单
   constructor(){
