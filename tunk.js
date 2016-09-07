@@ -11,8 +11,8 @@
 		hook_beforeFlowIn = [],
 		stateUpdateHandlers = [],
 		configs={
-			isolateMode: 'deep', // deep, shallow, none
-			async: false,
+			isolate: 'deep', // deep, shallow, none
+			async: true,
 			debug: false
 		};
 
@@ -29,16 +29,16 @@
 		target[property].isAction = true;
 	}
 
-	tunk.extend = function (opt) {
+	tunk.extend = function (opts) {
 		console.log(arguments);
-		if (typeof opt === 'function') {
-			return extend(opt.name, opt);
+		if (typeof opts === 'function') {
+			return extend(opts.name, opts, {});
 		} else return function (target, property, descriptor) {
-			return extend(target.name, target);
+			return extend(target.name, target, opts);
 		};
 	}
 
-	function extend(name, target) {
+	function extend(name, target, opts) {
 
 		var protos = target.prototype;
 
@@ -46,19 +46,8 @@
 
 		Object.assign(protos, mixins, {
 			getState: function getState(otherModuleName) {
-				if (!otherModuleName) return clone(store[name]);
-				else return clone(store[otherModuleName]);
-			}
-		});
-
-		Object.defineProperties(protos, {
-			'state': {
-				get: function () {
-					return this.getState();
-				},
-				set: function () {
-					throw 'please update state with dispatch instead.';
-				}
+				if (!otherModuleName) return clone(store[name], modules[name]._isolate_);
+				else return clone(store[otherModuleName], modules[otherModuleName]._isolate_);
 			}
 		});
 
@@ -78,7 +67,7 @@
 							var args = arguments;
 							setTimeout(function(){
 								var result = apply(originAction, args, modules[moduleName]);
-								if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+								if (typeof result !== 'undefined') dispatch.call(modules[moduleName], result);
 							},0);
 						}else{
 							var result = apply(originAction, arguments, modules[moduleName]);
@@ -100,17 +89,46 @@
 		protos.dispatch = dispatch;
 
 		function dispatch() {
-			return run_middlewares(this, arguments, {
-				moduleName: name,
-				actionName: 'dispatch',
-				modules: modules,
-				store: store,
-			}, dispatch);
+			if(configs.async) {
+				var args = arguments;
+				setTimeout(function () {
+					return run_middlewares(this, args, {
+						moduleName: name,
+						actionName: 'dispatch',
+						modules: modules,
+						store: store,
+					}, dispatch);
+				});
+			}else {
+				return run_middlewares(this, arguments, {
+					moduleName: name,
+					actionName: 'dispatch',
+					modules: modules,
+					store: store,
+				}, dispatch);
+			}
+
 		}
 
 		store[name] = {};
 
+		protos._isolate_ = opts.isolate || configs.isolate;
+
+		//new target() 同步回调
+		modules[name]={};
+
 		modules[name] = new target();
+
+		Object.defineProperties(protos, {
+			'state': {
+				get: function () {
+					return this.getState();
+				},
+				set: function () {
+					throw 'please update state with dispatch instead.';
+				}
+			}
+		});
 
 		return modules[name];
 
@@ -154,6 +172,7 @@
 			if (stateOptions) {
 				for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
 					statePath = stateOptions[x];
+					if(!statePath[0] || !modules[statePath[0]]) throw 'unknown module name:'+statePath[0];
 					connections[statePath[0]] = connections[statePath[0]] || [];
 					connections[statePath[0]].push({
 						comp: targetObject,
@@ -283,7 +302,7 @@
 		var newValue,
 			pipes = connections[moduleName],
 			changedFields = Object.keys(obj),
-			changedState = clone(obj),
+			changedState = clone(obj, modules[moduleName]._isolate_),
 			values = {};
 
 		Object.assign(store[moduleName], changedState);
@@ -330,19 +349,20 @@
 	//提升效率空间：支持两层 && 不克隆
 	//支持5层
 	function pathValue(statePath) {
+		var isolate = modules[statePath[0]]._isolate_;
 		var state = store[statePath[0]];
-		if (!statePath[1]) return clone(state);
+		if (!statePath[1]) return clone(state, isolate);
 		else {
 			state = isNaN(statePath[1]) ? state[statePath[1]] : (state[statePath[1]] || state[parseInt(statePath[1])]);
-			if (!statePath[2] || typeof state !== 'object') return clone(state);
+			if (!statePath[2] || typeof state !== 'object') return clone(state, isolate);
 			else {
 				state = isNaN(statePath[2]) ? state[statePath[2]] : (state[statePath[2]] || state[parseInt(statePath[2])]);
-				if (!statePath[3] || typeof state !== 'object') return clone(state);
+				if (!statePath[3] || typeof state !== 'object') return clone(state, isolate);
 				else {
 					state = isNaN(statePath[3]) ? state[statePath[3]] : (state[statePath[3]] || state[parseInt(statePath[3])]);
-					if (!statePath[4] || typeof state !== 'object') return clone(state);
+					if (!statePath[4] || typeof state !== 'object') return clone(state, isolate);
 					else {
-						return clone(isNaN(statePath[4]) ? state[statePath[4]] : (state[statePath[4]] || state[parseInt(statePath[4])]));
+						return clone(isNaN(statePath[4]) ? state[statePath[4]] : (state[statePath[4]] || state[parseInt(statePath[4])]), isolate);
 					}
 				}
 			}
@@ -352,7 +372,7 @@
 	function clone(obj, mode) {
 
 		if(typeof mode === 'undefined'){
-			mode = configs.isolateMode;
+			mode = configs.isolate;
 		}
 
 		if (typeof obj === 'object'){
