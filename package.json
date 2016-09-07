@@ -1,6 +1,6 @@
 {
   "name": "tunk",
-  "version": "1.1.7",
+  "version": "1.2.0",
   "description": "The action driven state management of application, which work as data center with vue,react or other frameworks",
   "main": "tunk.js",
   "author": "steven chen <522702986@qq.com>",

@@ -10,7 +10,7 @@ Vue.use(tunk);
 
 tunk.addMiddleware([actionMiddleware]);
 
-require('./store/counter');
+require('./modules/counter');
 
 new Vue({
     el: 'body',
