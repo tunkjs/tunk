@@ -112,7 +112,7 @@
 
 		store[name] = {};
 
-		protos._isolate_ = opts.isolate || configs.isolate;
+		protos._isolate_ = opts.isolate;
 
 		//new target() 同步回调
 		modules[name]={};
@@ -270,6 +270,7 @@
 		clone: function(obj, mode){
 			return clone(obj, mode||'deep');
 		},
+
 	});
 
 	function run_middlewares(module, args, context, dispatch) {

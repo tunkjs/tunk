@@ -112,7 +112,7 @@
 
 		store[name] = {};
 
-		protos._isolate_ = opts.isolate || configs.isolate;
+		protos._isolate_ = opts.isolate;
 
 		//new target() 同步回调
 		modules[name]={};
