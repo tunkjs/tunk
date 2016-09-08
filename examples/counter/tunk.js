@@ -25,6 +25,9 @@
 
 	tunk.config = tunk;
 
+
+
+
 	tunk.action = function action(target, property, descriptor) {
 		target[property].isAction = true;
 	}
