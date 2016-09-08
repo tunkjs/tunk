@@ -12,8 +12,8 @@ import {extend, action} from 'tunk';
 class options {
 	
 	constructor(){
-
-		this.dispatch({t:'default',});
+		//异步情况下，组件获取不了默认数据
+		this.state={ t:'default' };
 
 	}
 	@action
@@ -96,7 +96,9 @@ export default {
 	},
 
 	ready(){
+
 		if(this.t==='default') this.$set('units.pipes',true);
+
 		if(this.test_dispatch) this.$set('units.action_inject',true);
 		setTimeout(()=>{
 			this.test_dispatch();

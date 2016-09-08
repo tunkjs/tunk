@@ -13,7 +13,7 @@ import {extend, action} from 'tunk';
 @extend
 class promise {
     constructor(){
-		this.dispatch({
+		this.state=({
 			t:'default',
 		});
     }

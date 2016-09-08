@@ -8,6 +8,8 @@ import actionMiddleware from "tunk-action-middleware";
 import request from "tunk-request";
 import cookie from "tunk-cookie";
 
+tunk.config({async:true,debug:true});
+
 Vue.use(tunk);
 
 tunk.addMiddleware([actionMiddleware, functionMiddleware, promiseMiddleware]);

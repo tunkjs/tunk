@@ -107,17 +107,24 @@
 					store: store,
 				}, dispatch);
 			}
-
 		}
-
-		store[name] = {};
 
 		protos._isolate_ = opts.isolate;
 
-		//new target() 同步回调
-		modules[name]={};
-
 		modules[name] = new target();
+
+		var defaultState = modules[name].state;
+
+		if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
+			if(configs.debug){
+				console.error('object type of the default state is required',{name:name, defaultState:defaultState});
+			} else throw 'object type of the default state is required';
+		}
+
+
+		store[name] = Object.assign({}, clone(modules[name].state, protos._isolate_));
+
+		delete modules[name].state;
 
 		Object.defineProperties(protos, {
 			'state': {
@@ -304,6 +311,14 @@
 			changedFields = Object.keys(obj),
 			changedState = clone(obj, modules[moduleName]._isolate_),
 			values = {};
+
+		if(configs.debug){
+			console.groupCollapsed('storeState', moduleName, actionName);
+				console.log('action', moduleName+'.'+actionName);
+				console.log('changedState',changedState);
+				console.log('store['+moduleName+']', clone(store[moduleName], 'deep'));
+			console.groupEnd();
+		}
 
 		Object.assign(store[moduleName], changedState);
 
