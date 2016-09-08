@@ -5,6 +5,7 @@ import "tunk-vue";
 import actionMiddleware from "tunk-action-middleware";
 import App from "./components/Counter.vue";
 
+tunk.config({async:true, isolate:'shallow', debug:true});
 
 Vue.use(tunk);
 

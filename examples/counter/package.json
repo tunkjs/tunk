@@ -1,6 +1,6 @@
 {
   "name": "tunk-example-counter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "the counter example of tunk && vue",
   "devDependencies": {
     "babel-core": "^6.5.2",

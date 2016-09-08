@@ -9,10 +9,12 @@
 		middlewares = [],
 		hook_beforeStore = [],
 		hook_beforeStateInject = [],
+		hook_afterStateInjected = [],
 		stateUpdateHandlers = [],
+		watchers = {},
 		configs={
 			isolate: 'deep', // deep, shallow, none
-			async: true,
+			async: false,
 			debug: false
 		};
 
@@ -25,21 +27,35 @@
 
 	tunk.config = tunk;
 
+
+
 	tunk.action = function action(target, property, descriptor) {
+		if(target[property].watching) throw 'you can not set a watcher method to be an action';
 		target[property].isAction = true;
 	}
 
+	tunk.watch = function watch(watchPath) {
+
+		if(typeof watchPath !=='string' || (watchPath=watchPath.split('.')).length !== 2 )
+			throw 'the path you watch should be like moduleName.stateName';
+
+		return function(target, property, descriptor){
+			if(target[property].isAction) throw 'you can not set a action method to be a watcher';
+			target[property].watching = watchPath;
+		}
+	}
+
 	tunk.extend = function (opts) {
-		console.log(arguments);
 		if (typeof opts === 'function') {
-			return extend(opts.name, opts, {});
+			return extend(opts, {});
 		} else return function (target, property, descriptor) {
-			return extend(target.name, target, opts);
+			return extend(target, opts);
 		};
 	}
 
-	function extend(name, target, opts) {
+	function extend(target, opts) {
 
+		var name = target.name;
 		var protos = target.prototype;
 
 		if(!name) throw 'the name of module was required.';
@@ -54,9 +70,9 @@
 
 		var properties = Object.getOwnPropertyNames(target.prototype);
 
-		for (var i = 0, l = properties.length; i < l; i++) {
+		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
 
-			if (protos[properties[i]] && protos[properties[i]].isAction)
+			if (protos[properties[i]].isAction){
 				protos[properties[i]] = (function (moduleName, actionName, originAction) {
 
 					action.isAction = true;
@@ -64,27 +80,74 @@
 					return action;
 
 					function action() {
-						if(configs.async){
-							var args = arguments;
-							setTimeout(function(){
-								var result = apply(originAction, args, modules[moduleName]);
-								if (typeof result !== 'undefined') dispatch.call(modules[moduleName], result);
-							},0);
-						}else{
-							var result = apply(originAction, arguments, modules[moduleName]);
-							if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
-						}
-					};
+						var result = apply(originAction, arguments, modules[moduleName]);
+						if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+					}
 
 					function dispatch() {
-						return run_middlewares(this, arguments, {
-							moduleName: moduleName,
-							actionName: actionName,
-							modules: modules,
-							store: store,
-						}, dispatch);
+						if (configs.async) {
+							var args = arguments;
+							var that=this;
+							setTimeout(function () {
+								return run_middlewares(that, args, {
+									moduleName: moduleName,
+									actionName: actionName,
+									modules: modules,
+									store: store,
+								}, dispatch);
+							}, 0);
+						} else {
+							return run_middlewares(this, arguments, {
+								moduleName: moduleName,
+								actionName: actionName,
+								modules: modules,
+								store: store,
+							}, dispatch);
+						}
+
 					}
 				})(name, properties[i], protos[properties[i]]);
+
+			}else if(protos[properties[i]].watching) {
+
+				(function (moduleName, watcherName, watcher) {
+					var watchPath = watcher.watching;
+
+					if(moduleName===watchPath[0]) throw 'you can\'t watch the state of current module';
+
+					watchers[watchPath[0]] = watchers[watchPath[0]] || {};
+					watchers[watchPath[0]][watchPath[1]] = watchers[watchPath[0]][watchPath[1]] || [];
+
+					watchers[watchPath[0]][watchPath[1]].push(function(newValue, fromStatePath, fromModule, fromAction){
+						if(!modules[watchPath[0]])
+							throw 'unknown module name ' + watchPath[0];
+						var result = watcher.call(modules[moduleName], newValue, fromStatePath, fromModule, fromAction);
+						if (typeof result !== 'undefined') return dispatch.call(modules[moduleName], result);
+					});
+
+					function dispatch() {
+						if(configs.async) {
+							var args = arguments;
+							var that=this;
+							setTimeout(function () {
+								return run_middlewares(that, args, {
+									moduleName: moduleName,
+									actionName: watcherName,
+									modules: modules,
+									store: store,
+								}, dispatch);
+							});
+						}else {
+							return run_middlewares(this, arguments, {
+								moduleName: moduleName,
+								actionName: watcherName,
+								modules: modules,
+								store: store,
+							}, dispatch);
+						}
+					}
+				})(name, properties[i], protos[properties[i]]);
+			}
 		}
 
 		protos.dispatch = dispatch;
@@ -92,8 +155,9 @@
 		function dispatch() {
 			if(configs.async) {
 				var args = arguments;
+				var that=this;
 				setTimeout(function () {
-					return run_middlewares(this, args, {
+					return run_middlewares(that, args, {
 						moduleName: name,
 						actionName: 'dispatch',
 						modules: modules,
@@ -125,7 +189,7 @@
 							} else throw 'object type of the default state is required';
 						}
 						store[name] = Object.assign({}, clone(state, protos._isolate_));
-					} else throw 'please update state with dispatch instead, you could set a value when initial state.';
+					} else throw 'you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
 			}
 		});
@@ -138,7 +202,7 @@
 			if(configs.debug){
 				console.error('object type of the default state is required',{name:name, defaultState:defaultState});
 			} else throw 'object type of the default state is required';
-		}
+		}else if(typeof defaultState ==='undefined') store[name] = {};
 
 		return modules[name];
 
@@ -159,6 +223,9 @@
 					break;
 				case 'beforeStateInject':
 					hook_beforeStateInject.push(func);
+				case 'afterStateInjected':
+					hook_afterStateInjected.push(func);
+
 			}
 		else throw 'a callback as the second argument is needed';
 	};
@@ -186,7 +253,7 @@
 					connections[statePath[0]] = connections[statePath[0]] || [];
 					connections[statePath[0]].push({
 						comp: targetObject,
-						dataName: x,
+						propName: x,
 						statePath: statePath,
 					});
 
@@ -225,7 +292,7 @@
 			if (stateOptions) {
 				var statePath, tmp;
 				for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
-					statePath = stateOptions[x].split('.');
+					statePath = stateOptions[x];
 					tmp = [];
 					for (var i = 0, l = connections[statePath[0]].length; i < l; i++) {
 						if (connections[statePath[0]][i].comp !== target) tmp.push(connections[statePath[0]][i]);
@@ -313,7 +380,9 @@
 			pipes = connections[moduleName],
 			changedFields = Object.keys(obj),
 			changedState = clone(obj, modules[moduleName]._isolate_),
-			values = {};
+			values = {},
+			statePath,
+			watchers_;
 
 		if(configs.debug){
 			console.groupCollapsed('storeState', moduleName, actionName);
@@ -327,21 +396,45 @@
 
 		if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
 
+			statePath = pipes[i].statePath;
+
 			// 只更新 changedFields 字段
-			if (pipes[i].statePath[1] && changedFields.indexOf(pipes[i].statePath[1]) === -1) continue;
+			if (statePath[1] && changedFields.indexOf(statePath[1]) === -1) continue;
 
 			//减少克隆次数，分发出去的数据用同一个副本，减少调用 pathValue
-			newValue = values[pipes[i].statePath] || (values[pipes[i].statePath] = pathValue(pipes[i].statePath));
+			newValue = values[statePath] || (values[statePath] = pathValue(statePath));
 
 			// 数据流入前hook
-			run_beforeStateInject_hooks(pipes[i].comp, {
-				name: pipes[i].dataName,
-				value: newValue,
-				action: moduleName + '.' + actionName
-			});
+			for (var k = 0, m = hook_beforeStateInject.length; k < m; k++) {
+				hook_beforeStateInject[k]({
+					propName: pipes[i].propName,
+					statePath:statePath,
+					newState: newValue,
+					moduleName: moduleName,
+					actionName:actionName,
+				});
+			}
 
 			for (var j = 0; j < stateUpdateHandlers.length; j++)
-				stateUpdateHandlers[j](pipes[i].comp, pipes[i].dataName, newValue, moduleName + '.' + actionName);
+				stateUpdateHandlers[j](pipes[i].comp, pipes[i].propName, newValue, moduleName + '.' + actionName);
+
+			for (var i = 0, l = hook_afterStateInjected.length; i < l; i++) {
+				hook_afterStateInjected[i]({
+					propName: pipes[i].propName,
+					statePath:statePath,
+					newState: newValue,
+					moduleName: moduleName,
+					actionName:actionName,
+				});
+			}
+
+			setTimeout(function(){
+				if(watchers[statePath[0]] && (watchers_=watchers[statePath[0]][statePath[1]])){
+					for(var i=0,l=watchers_.length;i<l;i++) {
+						watchers_[i](newValue, statePath, moduleName, actionName);
+					}
+				}
+			});
 
 		}
 
@@ -358,9 +451,15 @@
 		return newState;
 	}
 
-	function run_beforeStateInject_hooks(comp, meta) {
-		for (var i = 0, l = hook_beforeStore.length; i < l; i++) {
-			hook_beforeStateInject[i].call(comp, meta);
+	function run_beforeStateInject_hooks(meta) {
+		for (var i = 0, l = hook_beforeStateInject.length; i < l; i++) {
+			hook_beforeStateInject[i](meta);
+		}
+	}
+
+	function run_afterStateInjected_hooks(comp, meta) {
+		for (var i = 0, l = hook_afterStateInjected.length; i < l; i++) {
+			hook_afterStateInjected[i](meta);
 		}
 	}
 

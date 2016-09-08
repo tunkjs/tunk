@@ -22,7 +22,6 @@ module.exports = {
         alias:{
             tunk:__dirname + '/tunk',
         }
-
     },
     module: {
         loaders: [
