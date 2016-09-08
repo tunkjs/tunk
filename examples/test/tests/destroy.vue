@@ -10,9 +10,14 @@ export default {
     state: {
 		q:'REQUEST.queue'
     },
+	watch:{
+		q:function(v){
+			console.log(v);
+		}
+	},
 
 	ready(){
-		
+		console.log(this);
 	}
 }
 </script>

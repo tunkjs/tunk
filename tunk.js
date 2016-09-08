@@ -418,8 +418,8 @@
 			for (var j = 0; j < stateUpdateHandlers.length; j++)
 				stateUpdateHandlers[j](pipes[i].comp, pipes[i].propName, newValue, moduleName + '.' + actionName);
 
-			for (var i = 0, l = hook_afterStateInjected.length; i < l; i++) {
-				hook_afterStateInjected[i]({
+			for (var ii = 0, ll = hook_afterStateInjected.length; ii < ll; ii++) {
+				hook_afterStateInjected[ii]({
 					propName: pipes[i].propName,
 					statePath:statePath,
 					newState: newValue,
