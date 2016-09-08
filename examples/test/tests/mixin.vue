@@ -10,7 +10,7 @@
 
 import baflow from 'baflow';
 
-//beforeStore beforeFlowIn
+//beforeStore beforeStateInject
 baflow.bind('beforeStore',function(newState,oldState){
 	console.log('test:beforeStore',JSON.parse(JSON.stringify({newState,oldState})));
 });
@@ -19,11 +19,11 @@ baflow.bind('beforeStore',function(newState,oldState){
 	console.log('test2:beforeStore');
 });
 
-baflow.bind('beforeFlowIn',function(meta){
-	console.log('test:beforeFlowIn',{meta,comp:this});
+baflow.bind('beforeStateInject',function(meta){
+	console.log('test:beforeStateInject',{meta,comp:this});
 });
-baflow.bind('beforeFlowIn',function(meta){
-	console.log('test2:beforeFlowIn');
+baflow.bind('beforeStateInject',function(meta){
+	console.log('test2:beforeStateInject');
 });
 
 @extend

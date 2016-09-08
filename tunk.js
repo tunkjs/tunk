@@ -8,7 +8,7 @@
 		mixins = {},
 		middlewares = [],
 		hook_beforeStore = [],
-		hook_beforeFlowIn = [],
+		hook_beforeStateInject = [],
 		stateUpdateHandlers = [],
 		configs={
 			isolate: 'deep', // deep, shallow, none
@@ -43,6 +43,7 @@
 		var protos = target.prototype;
 
 		if(!name) throw 'the name of module was required.';
+		if(modules[name]) throw 'the module '+name+' already exists';
 
 		Object.assign(protos, mixins, {
 			getState: function getState(otherModuleName) {
@@ -107,28 +108,37 @@
 					store: store,
 				}, dispatch);
 			}
-
 		}
 
-		store[name] = {};
-
 		protos._isolate_ = opts.isolate;
-
-		//new target() 同步回调
-		modules[name]={};
-
-		modules[name] = new target();
 
 		Object.defineProperties(protos, {
 			'state': {
 				get: function () {
 					return this.getState();
 				},
-				set: function () {
-					throw 'please update state with dispatch instead.';
+				set: function (state) {
+					if(!store[name]) {
+						if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
+							if(configs.debug){
+								console.error('object type of the default state is required',{name:name, defaultState:defaultState});
+							} else throw 'object type of the default state is required';
+						}
+						store[name] = Object.assign({}, clone(state, protos._isolate_));
+					} else throw 'please update state with dispatch instead, you could set a value when initial state.';
 				}
 			}
 		});
+
+		modules[name] = new target();
+
+		var defaultState = modules[name].state;
+
+		if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
+			if(configs.debug){
+				console.error('object type of the default state is required',{name:name, defaultState:defaultState});
+			} else throw 'object type of the default state is required';
+		}
 
 		return modules[name];
 
@@ -147,8 +157,8 @@
 				case 'beforeStore':
 					hook_beforeStore.push(func);
 					break;
-				case 'beforeFlowIn':
-					hook_beforeFlowIn.push(func);
+				case 'beforeStateInject':
+					hook_beforeStateInject.push(func);
 			}
 		else throw 'a callback as the second argument is needed';
 	};
@@ -168,7 +178,7 @@
 
 	tunk.connectionApi = {
 		connectState: function (targetObject, stateOptions) {
-			var initailState = {}, statePath;
+			var initialState = {}, statePath;
 			if (stateOptions) {
 				for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
 					statePath = stateOptions[x];
@@ -181,10 +191,10 @@
 					});
 
 					//设置组件默认数据
-					initailState[x] = pathValue(statePath);
+					initialState[x] = pathValue(statePath);
 				}
 			}
-			return initailState;
+			return initialState;
 		},
 		connectActions: function (target, actionOptions) {
 			if (actionOptions) {
@@ -305,6 +315,14 @@
 			changedState = clone(obj, modules[moduleName]._isolate_),
 			values = {};
 
+		if(configs.debug){
+			console.groupCollapsed('storeState', moduleName, actionName);
+			console.log('action', moduleName+'.'+actionName);
+			console.log('changedState',changedState);
+			console.log('store['+moduleName+']', clone(store[moduleName], 'deep'));
+			console.groupEnd();
+		}
+
 		Object.assign(store[moduleName], changedState);
 
 		if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
@@ -316,7 +334,7 @@
 			newValue = values[pipes[i].statePath] || (values[pipes[i].statePath] = pathValue(pipes[i].statePath));
 
 			// 数据流入前hook
-			run_beforeFlowIn_hooks(pipes[i].comp, {
+			run_beforeStateInject_hooks(pipes[i].comp, {
 				name: pipes[i].dataName,
 				value: newValue,
 				action: moduleName + '.' + actionName
@@ -340,9 +358,9 @@
 		return newState;
 	}
 
-	function run_beforeFlowIn_hooks(comp, meta) {
+	function run_beforeStateInject_hooks(comp, meta) {
 		for (var i = 0, l = hook_beforeStore.length; i < l; i++) {
-			hook_beforeFlowIn[i].call(comp, meta);
+			hook_beforeStateInject[i].call(comp, meta);
 		}
 	}
 

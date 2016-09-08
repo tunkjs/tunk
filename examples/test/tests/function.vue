@@ -45,7 +45,7 @@ export default {
 			}
 		};
 	},
-	beforeFlowIn(meta){
+	beforeStateInject(meta){
 	    if(meta.value==='dispatch') this.$set('units.dispatch',true);
 	    if(meta.value==='return') this.$set('units.return',true);
 	},

@@ -13,9 +13,9 @@ import {extend, action} from 'tunk';
 @extend
 class request {
     constructor(){
-		this.dispatch({
+		this.state={
 			t: '',
-		});
+		};
     }
     @action
 	test_jsonp(){

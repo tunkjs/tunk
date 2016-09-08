@@ -8,7 +8,7 @@
 
 import baflow from 'baflow';
 
-//beforeStore beforeFlowIn
+//beforeStore beforeStateInject
 baflow.bind('beforeStore',function(newState,oldState){
 	//console.log('test:beforeStore',JSON.parse(JSON.stringify({newState,oldState})));
 });
@@ -17,10 +17,10 @@ baflow.bind('beforeStore',function(newState,oldState){
 	//console.log('test2:beforeStore');
 });
 
-baflow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeStateInject',function(meta){
 	
 });
-baflow.bind('beforeFlowIn',function(meta){
+baflow.bind('beforeStateInject',function(meta){
 	
 });
 
@@ -44,8 +44,8 @@ export default {
 			units:{
 				beforeStore1:false,
 				beforeStore2:false,
-				beforeFlowIn1:false,
-				beforeFlowIn2:false
+				beforeStateInject1:false,
+				beforeStateInject2:false
 			}
 		};
 	},

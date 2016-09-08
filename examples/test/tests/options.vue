@@ -12,8 +12,8 @@ import {extend, action} from 'tunk';
 class options {
 	
 	constructor(){
-
-		this.dispatch({t:'default',});
+		//异步情况下，组件获取不了默认数据
+		this.state={ t:'default' };
 
 	}
 	@action
@@ -52,7 +52,7 @@ export default {
 				'pipes':false,
 				'action_inject':false,
 				'this_action':false,
-				'beforeFlowIn':false,
+				'beforeStateInject':false,
 				'dispatch':false,
 				return_despatch:false,
 				dispatch_multi_options:false,
@@ -65,9 +65,9 @@ export default {
 		test:require('./base.vue'),
 	},
 
-	beforeFlowIn(stateName, value, action){
-		console.log('beforeFlowIn(stateName, value, action)',value);
-		this.$set('units.beforeFlowIn',true);
+	beforeStateInject(stateName, value, action){
+		console.log('beforeStateInject(stateName, value, action)',value);
+		this.$set('units.beforeStateInject',true);
 		switch(value){
 			case'action':
 			this.$set('units.this_action',true);
@@ -96,7 +96,9 @@ export default {
 	},
 
 	ready(){
+
 		if(this.t==='default') this.$set('units.pipes',true);
+
 		if(this.test_dispatch) this.$set('units.action_inject',true);
 		setTimeout(()=>{
 			this.test_dispatch();
