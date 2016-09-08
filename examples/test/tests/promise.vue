@@ -67,7 +67,7 @@ export default {
 		};
 	},
 
-	beforeFlowIn(stateName, newState, action){
+	beforeStateInject(stateName, newState, action){
 	    if(newState==='define') this.$data.units.define=true;
 	    if(newState==='return') this.$data.units.return=true;
 	},

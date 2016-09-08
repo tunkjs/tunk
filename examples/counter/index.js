@@ -11,6 +11,7 @@ Vue.use(tunk);
 tunk.addMiddleware([actionMiddleware]);
 
 require('./modules/counter');
+require('./modules/counterText');
 
 new Vue({
     el: 'body',

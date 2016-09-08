@@ -46,8 +46,8 @@ export default {
 		test:require('./base.vue'),
 	},
 
-	beforeFlowIn(meta){
-		this.$set('units.beforeFlowIn',true);
+	beforeStateInject(meta){
+		this.$set('units.beforeStateInject',true);
 		switch(meta.value){
 			case'action':
 			this.$set('units.this_action',true);

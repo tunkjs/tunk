@@ -1,10 +1,11 @@
 <template>
   <div>
-    Clicked: {{ count }} times
+    Clicked: {{ count }} : times
     <button @click="increment">+</button>
     <button @click="decrement">-</button>
     <button @click="incrementIfOdd">Increment if odd</button>
     <button @click="incrementAsync">Increment async</button>
+    <br/> <br/> {{ text }}
   </div>
 </template>
 
@@ -13,7 +14,8 @@
 export default {
 	replace:true,
     state: {
-      count: 'counter.count'
+      count: 'counter.count',
+      text:'counterText.text'
     },
     actions:{
     	increment:'counter.increment',
