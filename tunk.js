@@ -31,7 +31,7 @@
 
 	tunk.action = function action(target, property, descriptor) {
 		if(target[property].watching) throw 'you can not set a watcher method to be an action';
-		target[property].isAction = true;
+		target[property].actionOptions = true;
 	}
 
 	tunk.watch = function watch(watchPath) {
@@ -40,7 +40,7 @@
 			throw 'the path you watch should be like moduleName.stateName';
 
 		return function(target, property, descriptor){
-			if(target[property].isAction) throw 'you can not set a action method to be a watcher';
+			if(target[property].actionOptions) throw 'you can not set a action method to be a watcher';
 			target[property].watching = watchPath;
 		}
 	}
@@ -72,10 +72,10 @@
 
 		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
 
-			if (protos[properties[i]].isAction){
+			if (protos[properties[i]].actionOptions){
 				protos[properties[i]] = (function (moduleName, actionName, originAction) {
 
-					action.isAction = true;
+					action.actionOptions = true;
 
 					return action;
 
@@ -270,7 +270,7 @@
 					action = actionOptions[x];
 					if (!modules[action[0]]) throw 'unknown module name ' + action[0];
 					if (!modules[action[0]][action[1]]) throw 'unknown action name ' + action[1] + ' of ' + action[0];
-					if(!modules[action[0]][action[1]].isAction ) throw 'the method '+action[1]+' of '+action[0]+' is not an action';
+					if(!modules[action[0]][action[1]].actionOptions ) throw 'the method '+action[1]+' of '+action[0]+' is not an action';
 					target[x] = (function (moduleName, actionName) {
 						return function () {
 							apply(modules[moduleName][actionName], arguments, modules[moduleName]);
@@ -283,7 +283,7 @@
 			target[name] = makeDispatch(function (moduleName, actionName, argsArray) {
 				if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
 				if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
-				if(!modules[moduleName][actionName].isAction) throw 'the method '+actionName+' of '+moduleName+' is not an action';
+				if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
 				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 			});
 		},

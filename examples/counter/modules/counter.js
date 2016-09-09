@@ -1,13 +1,13 @@
-import {extend, action} from 'tunk';
+import {create, action} from 'tunk';
 
 
-@extend({isolate:'deep'})
+@create({isolate:'deep'})
 export default class counter {
   //不允许异步，应该保持简单
   constructor(){
     this.state = {
       count:0
-    }; 
+    };
   }
 
   @action

@@ -1,7 +1,7 @@
-import {extend, action, watch} from 'tunk';
+import {create, action, watch} from 'tunk';
 
 
-@extend({isolate:'deep'})
+@create({isolate:'deep'})
 export default class counterText {
   //不允许异步，应该保持简单
   constructor(){
