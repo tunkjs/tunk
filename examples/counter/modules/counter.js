@@ -7,7 +7,7 @@ export default class counter {
   constructor(){
     this.state = {
       count:0
-    };
+    }; 
   }
 
   @action
