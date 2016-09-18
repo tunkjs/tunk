@@ -7,10 +7,10 @@
 
 <script>
 
-import {extend, action} from 'tunk';
+import {create, action} from 'tunk';
 
 
-@extend
+@create
 class request {
     constructor(){
 		this.state={

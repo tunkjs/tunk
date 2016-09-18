@@ -51,6 +51,7 @@
 	tunk.Action = decorateAction;
 	tunk.createModule = createModule;
 
+	hooks.initModule=function(module, opts){ return new module(); };
 	function createModule(module, opts) {
 
 		var name = module.name;
@@ -58,7 +59,7 @@
 		if(!name) throw 'the name of module was required.';
 		if(modules[name]) throw 'the module '+name+' already exists';
 
-		module = hooks.constructModule(module, opts);
+		module = constructModule(module, opts);
 
 		modules[name] = hooks.initModule(module, opts);
 
@@ -93,8 +94,7 @@
 		var result = apply(originAction, args, module);
 		if (typeof result !== 'undefined') dispatch.call(module, result);
 	}
-
-	hooks.createAction=function(moduleName, actionName, originAction){
+	function createAction(moduleName, actionName, originAction){
 
 		action.actionOptions = originAction.actionOptions;
 
@@ -124,12 +124,11 @@
 		}
 	};
 
-	hooks.callWatcher = function(dispatch, watcher, newValue, fromStatePath, fromModule, fromAction, module){
-		var result = watcher.call(module, newValue, fromStatePath, fromModule, fromAction);
+	hooks.callWatcher = function(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, module){
+		var result = watcher.call(module, newValue, watchingStatePath, watchingModule, action);
 		if (typeof result !== 'undefined') dispatch.call(module, result);
 	}
-
-	hooks.createWatcher=function(moduleName, watcherName, watcher){
+	function createWatcher(moduleName, watcherName, watcher){
 
 		var watchPath = watcher.watcherOptions.watchPath;
 
@@ -138,7 +137,7 @@
 		watchers[watchPath[0]] = watchers[watchPath[0]] || {};
 		watchers[watchPath[0]][watchPath[1]] = watchers[watchPath[0]][watchPath[1]] || [];
 
-		watchers[watchPath[0]][watchPath[1]].push(function(newValue, fromStatePath, fromModule, fromAction){
+		watchers[watchPath[0]][watchPath[1]].push(function(newValue, watchingStatePath, watchingModule, action){
 			if(!modules[watchPath[0]])
 				throw 'unknown module name ' + watchPath[0];
 
@@ -147,10 +146,10 @@
 
 			if (configs.async) {
 				setTimeout(function () {
-					hooks.callWatcher(dispatch, watcher, newValue, fromStatePath, fromModule, fromAction, modules[moduleName]);
+					hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, modules[moduleName]);
 				})
 			}else{
-				hooks.callWatcher(dispatch, watcher, newValue, fromStatePath, fromModule, fromAction, modules[moduleName]);
+				hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, modules[moduleName]);
 			}
 		});
 
@@ -168,17 +167,23 @@
 
 	function banCallingWatcher(){throw 'you can\'t call watcher directly'}
 
-	hooks.constructProto =function(moduleName, protos, propName){
-		if (protos[propName].actionOptions){
-			return hooks.createAction(moduleName, propName, protos[propName]);
-		}else if(protos[propName].watcherOptions) {
-			return hooks.createWatcher(moduleName, propName, protos[propName]);
-		}else return protos[propName];
+	hooks.override =function(moduleName, protos, protoName){
+		if (protos[protoName].actionOptions){
+			return createAction(moduleName, protoName, protos[protoName]);
+		}else if(protos[protoName].watcherOptions) {
+			return createWatcher(moduleName, protoName, protos[protoName]);
+		}else return protos[protoName];
 	}
-
-	hooks.constructModule=function(module, opts){
+	function constructModule(module, opts){
 		var name = module.name;
 		var protos = module.prototype;
+
+		var properties = Object.getOwnPropertyNames(protos);
+
+		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
+			protos[properties[i]] = hooks.override(name, protos, properties[i]);
+		}
+
 		Object.assign(protos, mixins, {
 			getState: function getState(otherModuleName) {
 				if (!otherModuleName) return clone(store[name], modules[name]._isolate_);
@@ -186,15 +191,9 @@
 			}
 		});
 
-		var properties = Object.getOwnPropertyNames(protos);
-
 		protos.dispatch=dispatch;
 
 		protos._isolate_ = opts.isolate;
-
-		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
-			protos[properties[i]] = hooks.constructProto(name, protos, properties[i]);
-		}
 
 		function dispatch() {
 			return run_middlewares(this, arguments, {
@@ -227,10 +226,8 @@
 	};
 
 
-	hooks.initModule=function(module){
-		return new module();
-	};
 
+	hooks.checkReadyToStore=function(moduleName, actionName, state, changedState){return true;};
 	function run_middlewares(module, args, context, dispatch) {
 		var index = 0;
 
@@ -250,14 +247,14 @@
 				throw 'the param of end should be a plain data object';
 			}
 			index = middlewares.length;
-			if(hooks.didRunMiddlewares(result, context))
+			if(hooks.checkReadyToStore(context.moduleName, context.actionName, store[context.moduleName], result))
 				return storeNewState(result, context.moduleName, context.actionName);
 		}
 	}
 
-	hooks.didRunMiddlewares=function(){return true;};
 
-	//数据进出 store 通过 clone 隔离
+	hooks.store=function(moduleName, actionName, state, changedState){ Object.assign(state, changedState); };
+	hooks.updateComponentState = function(comp, propName, newValue, moduleName, actionName){}
 	function storeNewState(obj, moduleName, actionName) {
 		var newValue,
 			pipes = connections[moduleName],
@@ -275,7 +272,7 @@
 			console.groupEnd();
 		}
 
-		Object.assign(store[moduleName], changedState);
+		hooks.store(moduleName, actionName, store[moduleName], changedState);
 
 		if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
 
@@ -287,7 +284,7 @@
 			//减少克隆次数，分发出去的数据用同一个副本，减少调用 pathValue
 			newValue = values[statePath] || (values[statePath] = pathValue(statePath));
 
-			hooks.updateComponentState(pipes[i].comp, pipes[i].propName, newValue, moduleName+'.'+actionName);
+			hooks.updateComponentState(pipes[i].comp, pipes[i].propName, newValue, moduleName, actionName);
 
 			if(watchers[statePath[0]] && (watchers_=watchers[statePath[0]][statePath[1]])){
 				for(var ii=0,ll=watchers_.length;ii<ll;ii++) {
@@ -298,8 +295,7 @@
 		return changedState;
 	}
 
-	//stateUpdateHandlers[j](comp, propName, newValue, moduleName + '.' + actionName);
-	hooks.updateComponentState = function(comp, propName, newValue, actionPath){}
+
 
 
 	tunk.dispatch = function (moduleName, options) {
@@ -342,66 +338,45 @@
 	};
 
 
-	tunk.connectionApi = {
-		connectState: function (targetObject, stateOptions) {
-			var initialState = {}, statePath;
-			if (stateOptions) {
-				for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
-					statePath = stateOptions[x];
-					if(!statePath[0] || !modules[statePath[0]]) throw 'unknown module name:'+statePath[0];
-					connections[statePath[0]] = connections[statePath[0]] || [];
-					connections[statePath[0]].push({
-						comp: targetObject,
-						propName: x,
-						statePath: statePath,
-					});
+	tunk.connection = {
+		state: function (targetObject, propName, statePath) {
 
-					//设置组件默认数据
-					initialState[x] = pathValue(statePath);
-				}
-			}
-			return initialState;
-		},
-		connectActions: function (target, actionOptions) {
-			if (actionOptions) {
-				var action;
-				for (var x in actionOptions) if (actionOptions.hasOwnProperty(x)) {
-					action = actionOptions[x];
-					if (!modules[action[0]]) throw 'unknown module name ' + action[0];
-					if (!modules[action[0]][action[1]]) throw 'unknown action name ' + action[1] + ' of ' + action[0];
-					if(!modules[action[0]][action[1]].actionOptions ) throw 'the method '+action[1]+' of '+action[0]+' is not an action';
-					target[x] = (function (moduleName, actionName) {
-						return function () {
-							apply(modules[moduleName][actionName], arguments, modules[moduleName]);
-						};
-					})(action[0], action[1]);
-				}
-			}
-		},
-		setDispatchMethod: function (target, name, makeDispatch) {
-			target[name] = makeDispatch(function (moduleName, actionName, argsArray) {
-				if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
-				if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
-				if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
-				apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+			if(!statePath[0] || !modules[statePath[0]]) throw 'unknown module name:'+statePath[0];
+			connections[statePath[0]] = connections[statePath[0]] || [];
+			connections[statePath[0]].push({
+				comp: targetObject,
+				propName: propName,
+				statePath: statePath,
 			});
+
+			//返回组件默认数据
+			return pathValue(statePath);
+
+		},
+		action: function (target, propName, moduleName, actionName) {
+			if (!modules[moduleName]) throw 'unknown module name ' + moduleName;
+			if (!modules[moduleName][actionName]) throw 'unknown action name ' + action[1] + ' of ' + moduleName;
+			if(!modules[moduleName][actionName].actionOptions ) throw 'the method '+action[1]+' of '+moduleName+' is not an action';
+			target[propName] = function () {
+				apply(modules[moduleName][actionName], arguments, modules[moduleName]);
+			};
 		},
 
-		disconnect: function (target, stateOptions, actionOptions) {
-			if (stateOptions) {
-				var statePath, tmp;
-				for (var x in stateOptions) if (stateOptions.hasOwnProperty(x)) {
-					statePath = stateOptions[x];
-					tmp = [];
-					for (var i = 0, l = connections[statePath[0]].length; i < l; i++) {
-						if (connections[statePath[0]][i].comp !== target) tmp.push(connections[statePath[0]][i]);
-					}
-					connections[statePath[0]] = tmp;
-				}
+		dispatch: function (moduleName, actionName, argsArray) {
+			if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
+			if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
+			if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
+			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+		},
+
+		clearState: function (target, propName, statePath) {
+			var tmp = [];
+			for (var i = 0, l = connections[statePath[0]].length; i < l; i++) {
+				if (connections[statePath[0]][i].comp !== target) tmp.push(connections[statePath[0]][i]);
 			}
+			connections[statePath[0]] = tmp;
+
 		},
-
-
 	};
 
 

@@ -6,17 +6,17 @@
 
 <script>
 
-import {extend, action} from 'tunk';
+import {create, action} from 'tunk';
 
-@extend
+@create({async:false})
 class options {
 	
 	constructor(){
 		//异步情况下，组件获取不了默认数据
 		this.state={ t:'default' };
-
 	}
-	@action
+
+	@action({async:true})
     test_dispatched (){
 		return {t:'dispatched'}
     }
