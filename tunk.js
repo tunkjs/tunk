@@ -49,7 +49,7 @@
 	tunk.createAction = decorateAction;
 	tunk.createModule = createModule;
 
-	hooks.initModule=function(module, opts){ return new module(); };
+	hooks.initModule=function(module, store, moduleName, opts){ return new module(); };
 	function createModule(module, opts) {
 
 		var name = module.name;
@@ -61,7 +61,7 @@
 
 		module = constructModule(module, opts);
 
-		modules[name] = hooks.initModule(module, opts);
+		modules[name] = hooks.initModule(module, store, moduleName, opts);
 
 		var defaultState = modules[name].state;
 
@@ -88,7 +88,7 @@
 		return target;
 	}
 
-	hooks.callAction = function(dispatch, originAction, args, module, actionOptions){
+	hooks.callAction = function(dispatch, originAction, args, module, moduleName, actionName,  actionOptions){
 		var result = apply(originAction, args, module);
 		if (typeof result !== 'undefined') dispatch.call(module, result);
 	}
@@ -112,10 +112,10 @@
 			if (configs.async) {
 				var args = arguments;
 				setTimeout(function () {
-					hooks.callAction(dispatch, originAction, args, modules[moduleName], actionOptions);
+					hooks.callAction(dispatch, originAction, args, modules[moduleName], moduleName, actionName, actionOptions);
 				}, 0);
 			} else {
-				hooks.callAction(dispatch, originAction, arguments, this, actionOptions);
+				hooks.callAction(dispatch, originAction, arguments, this, moduleName, actionName, actionOptions);
 			}
 
 			function dispatch() {
@@ -130,8 +130,8 @@
 		}
 	}
 
-	hooks.callWatcher = function(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, module){
-		var result = watcher.call(module, newValue, watchingStatePath, watchingModule, action);
+	hooks.callWatcher = function(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, module, moduleName, watcherName, watcherOptions){
+		var result = watcher.call(module, newValue, watchingStatePath, watchingModule, fromAction);
 		if (typeof result !== 'undefined') dispatch.call(module, result);
 	}
 	function createWatcher(moduleName, watcherName, watcher){
@@ -143,7 +143,7 @@
 		watchers[watchPath[0]] = watchers[watchPath[0]] || {};
 		watchers[watchPath[0]][watchPath[1]] = watchers[watchPath[0]][watchPath[1]] || [];
 
-		watchers[watchPath[0]][watchPath[1]].push(function(newValue, watchingStatePath, watchingModule, action){
+		watchers[watchPath[0]][watchPath[1]].push(function(newValue, watchingStatePath, watchingModule, fromAction){
 			if(!modules[watchPath[0]])
 				throw 'unknown module name ' + watchPath[0];
 
@@ -157,10 +157,10 @@
 
 			if (configs.async) {
 				setTimeout(function () {
-					hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, modules[moduleName], watcherOptions);
+					hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, modules[moduleName], moduleName, watcherName, watcherOptions);
 				})
 			}else{
-				hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, action, modules[moduleName], watcherOptions);
+				hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, modules[moduleName], moduleName, watcherName, watcherOptions);
 			}
 
 			function dispatch() {
@@ -239,36 +239,9 @@
 	}
 
 
-
-	hooks.checkReadyToStore=function(moduleName, actionName, state, changedState){return true;};
-	function run_middlewares(module, args, context, dispatch) {
-		var index = 0;
-
-		return next(args);
-
-		function next(args) {
-			if (typeof args !== 'object' || isNaN(args.length)) throw 'the param of next should be type of array or arguments';
-			if (index < middlewares.length)
-				return apply(middlewares[index++](dispatch, next, end, context), args, module);
-			else return end(args[0]);
-		}
-
-		function end(result) {
-			if (!result) return;
-			if (result.constructor !== Object) {
-				console.log(arguments);
-				throw 'the param of end should be a plain data object';
-			}
-			index = middlewares.length;
-			if(hooks.checkReadyToStore(context.moduleName, context.actionName, store[context.moduleName], result, context.options))
-				return storeNewState(result, context.moduleName, context.actionName, context.options);
-		}
-	}
-
-
 	hooks.store=function(moduleName, actionName, state, changedState, options){ Object.assign(state, changedState); };
-	hooks.updateComponentState = function(comp, propName, newValue, moduleName, actionName, options){}
-	function storeNewState(obj, moduleName, actionName, options) {
+	hooks.updateComponentState = function(comp, propName, newValue, moduleName, actionName, options){};
+	hooks.storeNewState = function(obj, moduleName, actionName, options) {
 		var newValue,
 			pipes = connections[moduleName],
 			changedFields = Object.keys(obj),
@@ -298,7 +271,34 @@
 			}
 		}
 		return changedState;
+	};
+
+
+	function run_middlewares(module, args, context, dispatch) {
+		var index = 0;
+
+		return next(args);
+
+		function next(args) {
+			if (typeof args !== 'object' || isNaN(args.length)) throw 'the param of next should be type of array or arguments';
+			if (index < middlewares.length)
+				return apply(middlewares[index++](dispatch, next, end, context), args, module);
+			else return end(args[0]);
+		}
+
+		function end(result) {
+			if (!result) return;
+			if (result.constructor !== Object) {
+				console.log(arguments);
+				throw 'the param of end should be a plain data object';
+			}
+			index = middlewares.length;
+			hooks.storeNewState(result, context.moduleName, context.actionName, context.options);
+		}
 	}
+
+
+
 
 
 
