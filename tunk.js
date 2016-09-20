@@ -131,8 +131,7 @@
 	}
 
 	hooks.callWatcher = function(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, module, moduleName, watcherName, watcherOptions){
-		var result = watcher.call(module, newValue, watchingStatePath, watchingModule, fromAction);
-		if (typeof result !== 'undefined') dispatch.call(module, result);
+		watcher.call(module, newValue, watchingStatePath, watchingModule, fromAction);
 	}
 	function createWatcher(moduleName, watcherName, watcher){
 
@@ -170,6 +169,8 @@
 					options:watcherOptions,
 					modules: modules,
 					store: store,
+					isWatcher:true,
+					watchPath:watchingStatePath,
 				}, dispatch);
 			}
 		});
@@ -292,6 +293,7 @@
 				console.log(arguments);
 				throw 'the param of end should be a plain data object';
 			}
+			if(context.isWatcher) throw 'A watcher could not update store directly';
 			index = middlewares.length;
 			hooks.storeNewState(result, context.moduleName, context.actionName, context.options);
 		}
