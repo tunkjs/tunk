@@ -61,7 +61,7 @@
 
 		module = constructModule(module, opts);
 
-		modules[name] = hooks.initModule(module, store, moduleName, opts);
+		modules[name] = hooks.initModule(module, store, name, opts);
 
 		var defaultState = modules[name].state;
 
@@ -343,52 +343,66 @@
 	};
 
 
+	hooks.connectState=function(targetObject, propName, statePath, value){
+		connections[statePath[0]] = connections[statePath[0]] || [];
+		connections[statePath[0]].push({
+			comp: targetObject,
+			propName: propName,
+			statePath: statePath,
+		});
+	}
+	hooks.connectAction=function(target, propName, moduleName, actionName){
+		target[propName] = function () {
+			apply(modules[moduleName][actionName], arguments, modules[moduleName]);
+		};
+	}
+	hooks.connectDispatch=function(target, name, handle){
+		target[name] = handle(function dispatch(moduleName, actionName, argsArray) {
+			if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
+			if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
+			if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
+			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+		});
+	}
+	hooks.connectClean=function(target, stateOption){
+		var tmp = [];
+		for(var x in stateOption){
+			for (var i = 0, l = connections[stateOption[x][0]].length; i < l; i++) {
+				if (connections[stateOption[x][0]][i].comp !== target) tmp.push(connections[stateOption[x][0]][i]);
+			}
+			connections[stateOption[x][0]] = tmp;
+		}
+	}
 	tunk.connection = {
 		state: function (targetObject, propName, statePath) {
 
 			if(!statePath[0] || !modules[statePath[0]]) throw 'unknown module name:'+statePath[0];
-			connections[statePath[0]] = connections[statePath[0]] || [];
-			connections[statePath[0]].push({
-				comp: targetObject,
-				propName: propName,
-				statePath: statePath,
-			});
+
+			var value = pathValue(statePath, modules[statePath[0]].moduleOptions);
+
+			hooks.connectState(targetObject, propName, statePath, value);
 
 			targetObject._stateOptions_ = targetObject._stateOptions_ || {};
 			targetObject._stateOptions_[propName] = statePath;
-
 			//返回组件默认数据
-			return pathValue(statePath, modules[statePath[0]].moduleOptions);
+			return value;
 
 		},
 		action: function (target, propName, moduleName, actionName) {
 			if (!modules[moduleName]) throw 'unknown module name ' + moduleName;
 			if (!modules[moduleName][actionName]) throw 'unknown action name ' + action[1] + ' of ' + moduleName;
 			if(!modules[moduleName][actionName].actionOptions ) throw 'the method '+action[1]+' of '+moduleName+' is not an action';
-			target[propName] = function () {
-				apply(modules[moduleName][actionName], arguments, modules[moduleName]);
-			};
+			hooks.connectAction(target, propName, moduleName, actionName);
+
 		},
 
-		dispatch: function (moduleName, actionName, argsArray) {
-			if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
-			if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
-			if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
-			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+		dispatch: function(target, name, handle){
+			hooks.connectDispatch(target, name, handle);
 		},
 
 		clean: function (target) {
-			var tmp = [];
-
-			var stateOption = target._stateOptions_;
-
-			if(stateOption) for(var x in stateOption){
-				for (var i = 0, l = connections[stateOption[x][0]].length; i < l; i++) {
-					if (connections[stateOption[x][0]][i].comp !== target) tmp.push(connections[stateOption[x][0]][i]);
-				}
-				connections[stateOption[x][0]] = tmp;
-			}
-
+			if(target._stateOptions_)
+				hooks.connectClean(target, target._stateOptions_);
 		},
 	};
 
