@@ -248,7 +248,7 @@
 			changedFields = Object.keys(obj),
 			changedState = clone(obj, options.isolate),
 			values = {},
-			statePath, 
+			statePath,
 			watchers_;
 
 		hooks.store(moduleName, actionName, store[moduleName], changedState, options);
