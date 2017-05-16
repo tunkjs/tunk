@@ -1,5 +1,6 @@
 (function() {
 
+
 	var apply = require('apply.js');
 
 	var store = {},
