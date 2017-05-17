@@ -410,6 +410,50 @@
 	};
 
 
+	// action middleware
+	tunk.addMiddleware(function(dispatch, next, end, context){
+        return function(name, options){
+            if(typeof name !== 'string') {
+                return next(arguments);
+            }
+            if (name.indexOf('.') === -1) name = [context.moduleName, name];
+            else name = name.split('.');
+            if (!context.modules[name[0]]) throw 'unknown module name ' + name[0];
+            if (!context.modules[name[0]][name[1]]) throw 'unknown action name ' + name[1] + ' of ' + name[0];
+            if(!context.modules[name[0]][name[1]].actionOptions ) throw 'the method '+name[1]+' of '+name[0]+' is not an action';
+            return apply(context.modules[name[0]][name[1]], Array.prototype.slice.call(arguments,1), context.modules[name[0]]);
+        };
+    });
+	// promise middleware
+    tunk.addMiddleware(function(dispatch, next, end, context){
+        return function(promise){
+            if(typeof promise !== 'object' || !promise.then) {
+                return next(arguments);
+            }
+            promise.then(function(result){
+                setTimeout(function(){next([result]);});
+            });
+        };
+    });
+	// function middleware
+    tunk.addMiddleware(function(dispatch, next, end, context){
+        return function(func){
+            if(typeof func !== 'function') {
+                return next(arguments);
+            }
+
+            var result = apply(func,[this.getState()], this);
+            if(typeof result !=='undefined')
+                next([result]);
+
+        };
+    });
+
+
+
+
+
+
 	tunk.mixin({
 
 		each: function (obj, cb) {
