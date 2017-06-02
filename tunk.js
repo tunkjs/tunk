@@ -55,8 +55,8 @@
 
 		var name = module.name;
 
-		if(!name) throw 'the name of module was required.';
-		if(modules[name]) throw 'the module '+name+' already exists';
+		if(!name) throw '[TUNKJS]:the name of module was required.';
+		if(modules[name]) throw '[TUNKJS]:the module '+name+' already exists';
 
 		opts = Object.assign({}, configs, opts);
 
@@ -67,7 +67,7 @@
 		var defaultState = modules[name].state;
 
 		if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
-			throw 'object type of the default state is required';
+			throw '[TUNKJS]:object type of the default state is required';
 		}else if(typeof defaultState ==='undefined') store[name] = {};
 
 		return modules[name];
@@ -76,15 +76,15 @@
 
 	function decorateWatcher(target, watchPath, opts){
 		if(typeof watchPath !=='string' || (watchPath=watchPath.split('.')).length !== 2 )
-			throw 'the path you watch should be like moduleName.stateName';
-		if(target.actionOptions) throw 'you can not set a action method to be a watcher';
-		opts = Object.assign({watchPath:watchPath},opts);
+			throw '[TUNKJS]:the path you watch should be like moduleName.stateName';
+		if(target.actionOptions) throw '[TUNKJS]:you can not set a action method to be a watcher';
+		opts = Object.assign({watchPath:watchPath}, opts);
 		target.watcherOptions = opts;
 		return target;
 	}
 
 	function decorateAction(target, opts){
-		if(target.watcherOptions) throw 'you can not set a watcher method to be an action';
+		if(target.watcherOptions) throw '[TUNKJS]:you can not set a watcher method to be an action';
 		target.actionOptions = Object.assign({}, opts);
 		return target;
 	}
@@ -138,14 +138,14 @@
 
 		var watchPath = watcher.watcherOptions.watchPath;
 
-		if(moduleName===watchPath[0]) throw 'you can\'t watch the state of current module';
+		if(moduleName === watchPath[0]) throw '[TUNKJS]:you can\'t watch the state of current module';
 
 		watchers[watchPath[0]] = watchers[watchPath[0]] || {};
 		watchers[watchPath[0]][watchPath[1]] = watchers[watchPath[0]][watchPath[1]] || [];
 
 		watchers[watchPath[0]][watchPath[1]].push(function(newValue, watchingStatePath, watchingModule, fromAction){
 			if(!modules[watchPath[0]])
-				throw 'unknown module name ' + watchPath[0];
+				throw '[TUNKJS]:unknown module name ' + watchPath[0];
 
 			if(!watcher.watcherOptions.__composed__)
 				watcher.watcherOptions = Object.assign({__composed__:true}, modules[moduleName].moduleOptions, watcher.watcherOptions);
@@ -181,7 +181,7 @@
 
 	}
 
-	function banCallingWatcher(){throw 'you can\'t call watcher directly'}
+	function banCallingWatcher(){ throw '[TUNKJS]:you can\'t call watcher directly'; }
 
 	hooks.override =function(moduleName, protos, protoName){
 		if (protos[protoName].actionOptions){
@@ -192,9 +192,10 @@
 	}
 	function constructModule(module, opts){
 		var name = module.name;
+
 		var protos = module.prototype;
 
-		var properties = Object.getOwnPropertyNames(protos);
+		var properties = getProperties(module);
 
 		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
 			protos[properties[i]] = hooks.override(name, protos, properties[i]);
@@ -210,6 +211,8 @@
 		protos.dispatch=dispatch;
 
 		protos.moduleOptions = opts;
+
+		defineHiddenProps(protos, protos);
 
 		function dispatch() {
 			return run_middlewares(this, arguments, {
@@ -229,10 +232,10 @@
 				set: function (state) {
 					if(!store[name]) {
 						if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
-							throw 'object type of the default state is required';
+							throw '[TUNKJS]:object type of the default state is required';
 						}
 						store[name] = Object.assign({}, clone(state, opts.isolate));
-					} else throw 'you could just initialize state by setting an object to state, please use dispatch instead.';
+					} else throw '[TUNKJS]:you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
 			}
 		});
@@ -254,24 +257,24 @@
 
 		hooks.store(moduleName, actionName, store[moduleName], changedState, options);
 
-		if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
-
-			statePath = pipes[i].statePath;
-
-			// 只更新 changedFields 字段
-			if (statePath[1] && changedFields.indexOf(statePath[1]) === -1) continue;
-
-			//减少克隆次数，分发出去的数据用同一个副本，减少调用 pathValue
+		if(watchers[moduleName]) for(var x in changedFields) if(watchers_=watchers[moduleName][changedFields[x]]){
+			statePath = [moduleName, changedFields[x]];
 			newValue = values[statePath] || (values[statePath] = pathValue(statePath, options));
-
-			hooks.updateComponentState(pipes[i].comp, pipes[i].propName, newValue, moduleName, actionName, options);
-
-			if(watchers[statePath[0]] && (watchers_=watchers[statePath[0]][statePath[1]])){
-				for(var ii=0,ll=watchers_.length;ii<ll;ii++) {
-					watchers_[ii](newValue, statePath, moduleName, actionName);
-				}
+			for(var ii=0, ll=watchers_.length; ii<ll; ii++) {
+				watchers_[ii](newValue, statePath, moduleName, actionName);
 			}
 		}
+		setTimeout(function(){
+			if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
+				statePath = pipes[i].statePath;
+				// 只更新 changedFields 字段
+				if (statePath[1] && changedFields.indexOf(statePath[1]) === -1) continue;
+				//减少克隆次数，分发出去到达 View 的数据用同一个副本，减少调用 pathValue
+				newValue = values[statePath] || (values[statePath] = pathValue(statePath, options));
+				hooks.updateComponentState(pipes[i].comp, pipes[i].propName, newValue, moduleName, actionName, options);
+			}
+		});
+		
 		return changedState;
 	};
 
@@ -282,7 +285,7 @@
 		return next(args);
 
 		function next(args) {
-			if (typeof args !== 'object' || isNaN(args.length)) throw 'the param of next should be type of array or arguments';
+			if (typeof args !== 'object' || isNaN(args.length)) throw '[TUNKJS]:the param of next should be type of array or arguments';
 			if (index < middlewares.length)
 				return apply(middlewares[index++](dispatch, next, end, context), args, module);
 			else return end(args[0]);
@@ -292,9 +295,9 @@
 			if (!result) return;
 			if (result.constructor !== Object) {
 				console.log(arguments);
-				throw 'the param of end should be a plain data object';
+				throw '[TUNKJS]:the param of end should be a plain data object';
 			}
-			if(context.isWatcher) throw 'A watcher could not update store directly';
+			if(context.isWatcher) throw '[TUNKJS]:A watcher could not update store directly';
 			index = middlewares.length;
 			hooks.storeNewState(result, context.moduleName, context.actionName, context.options);
 		}
@@ -309,7 +312,7 @@
 	tunk.dispatch = function (moduleName, options) {
 		if (moduleName && moduleName.constructor === String)
 			storeNewState (options, moduleName, 'NONEACTION', configs);
-		else throw 'the first argument should be a module name and the second shuould be a plain object';
+		else throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
 	};
 
 	// tunk.hook(hookName, function(origin){
@@ -324,13 +327,13 @@
 
 		var originHook = hooks[hookName];
 
-		if(!originHook) throw 'hook '+hookName+' is not exist';
+		if(!originHook) throw '[TUNKJS]:hook '+ hookName +' is not exist';
 
-		if (typeof func !== 'function') throw 'the second argument should be a function';
+		if (typeof func !== 'function') throw '[TUNKJS]:the second argument should be a function';
 
 		func = func(originHook);
 
-		if (typeof func !== 'function') throw 'the function should return a hook function';
+		if (typeof func !== 'function') throw '[TUNKJS]:the function should return a hook function';
 
 		hooks[hookName] = func;
 	}
@@ -361,9 +364,9 @@
 	}
 	hooks.connectDispatch=function(target, name, handle){
 		target[name] = handle(function dispatch(moduleName, actionName, argsArray) {
-			if (!modules[moduleName]) throw 'unknown module name ' + moduleName + '.';
-			if (!modules[moduleName][actionName]) throw 'unknown action name ' + actionName + ' of ' + moduleName + '';
-			if(!modules[moduleName][actionName].actionOptions) throw 'the method '+actionName+' of '+moduleName+' is not an action';
+			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
+			if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
+			if(!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method '+actionName+' of '+moduleName+' is not an action';
 			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 		});
 	}
@@ -379,7 +382,7 @@
 	tunk.connection = {
 		state: function (targetObject, propName, statePath) {
 
-			if(!statePath[0] || !modules[statePath[0]]) throw 'unknown module name:'+statePath[0];
+			if(!statePath[0] || !modules[statePath[0]]) throw '[TUNKJS]:unknown module name:'+statePath[0];
 
 			var value = pathValue(statePath, modules[statePath[0]].moduleOptions);
 
@@ -389,14 +392,12 @@
 			targetObject._stateOptions_[propName] = statePath;
 			//返回组件默认数据
 			return value;
-
 		},
 		action: function (target, propName, moduleName, actionName) {
-			if (!modules[moduleName]) throw 'unknown module name ' + moduleName;
-			if (!modules[moduleName][actionName]) throw 'unknown action name ' + action[1] + ' of ' + moduleName;
-			if(!modules[moduleName][actionName].actionOptions ) throw 'the method '+action[1]+' of '+moduleName+' is not an action';
+			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName;
+			if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + action[1] + ' of ' + moduleName;
+			if(!modules[moduleName][actionName].actionOptions ) throw '[TUNKJS]:the method '+action[1]+' of '+moduleName+' is not an action';
 			hooks.connectAction(target, propName, moduleName, actionName);
-
 		},
 
 		dispatch: function(target, name, handle){
@@ -406,6 +407,16 @@
 		clean: function (target) {
 			if(target._stateOptions_)
 				hooks.connectClean(target, target._stateOptions_);
+		},
+
+		getState: function(moduleName){
+			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName;
+			return store[moduleName];
+		},
+
+		getModule: function(moduleName){
+			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName;
+			return modules[moduleName];
 		},
 	};
 
@@ -418,9 +429,9 @@
             }
             if (name.indexOf('.') === -1) name = [context.moduleName, name];
             else name = name.split('.');
-            if (!context.modules[name[0]]) throw 'unknown module name ' + name[0];
-            if (!context.modules[name[0]][name[1]]) throw 'unknown action name ' + name[1] + ' of ' + name[0];
-            if(!context.modules[name[0]][name[1]].actionOptions ) throw 'the method '+name[1]+' of '+name[0]+' is not an action';
+            if (!context.modules[name[0]]) throw '[TUNKJS]:unknown module name ' + name[0];
+            if (!context.modules[name[0]][name[1]]) throw '[TUNKJS]:unknown action name ' + name[1] + ' of ' + name[0];
+            if(!context.modules[name[0]][name[1]].actionOptions ) throw '[TUNKJS]:the method '+name[1]+' of '+name[0]+' is not an action';
             return apply(context.modules[name[0]][name[1]], Array.prototype.slice.call(arguments,1), context.modules[name[0]]);
         };
     });
@@ -463,7 +474,7 @@
 						if (cb(obj[i], i) === false) break;
 				} else for (var x in obj)
 					if (obj.hasOwnProperty(x) && cb(obj[x], x) === false) break;
-			} else console.error('argument is wrong');
+			} else console.error('[TUNKJS]:argument is wrong');
 		},
 
 		map: function (obj, cb) {
@@ -493,9 +504,30 @@
 
 	});
 
+	function defineHiddenProps(obj, props){
+		for(var x in props) {
+			Object.defineProperty(obj, x, {
+			    value: props[x],
+			    enumerable: false,
+			    writable: false,
+			    configurable: false
+			});
+		}
+	}
 
-
-
+	function getProperties(clas){
+		var proto = clas.prototype;
+		var protos = Object.getOwnPropertyNames(proto), properties;
+		while(proto.__proto__ && proto.__proto__.constructor.name !== 'Object'){
+			properties = Object.getOwnPropertyNames(proto.__proto__);
+			for(var i=0; i<properties.length; i++) {
+				if(protos.indexOf(properties[i]) === -1) protos.push(properties[i]);
+			}
+			proto = proto.__proto__;
+		}
+		
+		return protos;
+	}
 
 	//提升效率空间：支持两层 && 不克隆
 	//支持5层
