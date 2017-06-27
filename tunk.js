@@ -311,7 +311,7 @@
 
 	tunk.dispatch = function (moduleName, options) {
 		if (moduleName && moduleName.constructor === String)
-			storeNewState (options, moduleName, 'NONEACTION', configs);
+			hooks.storeNewState (options, moduleName, 'NONEACTION', configs);
 		else throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
 	};
 
@@ -371,8 +371,9 @@
 		});
 	}
 	hooks.connectClean=function(target, stateOption){
-		var tmp = [];
+		var tmp;
 		for(var x in stateOption){
+			tmp = [];
 			for (var i = 0, l = connections[stateOption[x][0]].length; i < l; i++) {
 				if (connections[stateOption[x][0]][i].comp !== target) tmp.push(connections[stateOption[x][0]][i]);
 			}
