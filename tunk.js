@@ -38,12 +38,21 @@
 		}
 	}
 
-	tunk.create = function (opts) {
-		if (typeof opts === 'function') {
-			return createModule(opts, {});
-		} else return function (target, property, descriptor) {
-			return createModule(target, opts);
-		};
+	tunk.create = function (name, opts) {
+		console.log(arguments)
+		if(typeof name === 'string') {
+			if(typeof opts === 'function'){
+				return createModule(opts, {name});
+			}else{
+				opts = opts || {};
+				opts.name = name;
+				return function (target, property, descriptor) {
+					return createModule(target, opts);
+				};
+			}
+		} else {
+			throw '[TUNKJS]:the name of module is required when creating a module.';
+		}
 	}
 
 	tunk.createWatch = decorateWatcher;
@@ -53,7 +62,7 @@
 	hooks.initModule=function(module, store, moduleName, opts){ return new module(); };
 	function createModule(module, opts) {
 
-		var name = module.name;
+		var name = opts.name;
 
 		if(!name) throw '[TUNKJS]:the name of module was required.';
 		if(modules[name]) throw '[TUNKJS]:the module '+name+' already exists';
