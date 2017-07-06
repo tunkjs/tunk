@@ -18,6 +18,7 @@
 
 	function tunk(conf) {
 		Object.assign(configs, conf);
+		return tunk;
 	}
 
 	tunk.configs = configs;
@@ -39,10 +40,9 @@
 	}
 
 	tunk.create = function (name, opts) {
-		console.log(arguments)
 		if(typeof name === 'string') {
 			if(typeof opts === 'function'){
-				return createModule(opts, {name});
+				return createModule(opts, {name: name});
 			}else{
 				opts = opts || {};
 				opts.name = name;
@@ -51,13 +51,18 @@
 				};
 			}
 		} else {
-			throw '[TUNKJS]:the name of module is required when creating a module.';
+			throw '[TUNKJS]:the name of module is required when creating a module with @create().';
 		}
 	}
 
 	tunk.createWatch = decorateWatcher;
 	tunk.createAction = decorateAction;
-	tunk.createModule = createModule;
+	tunk.createModule = function(name, module, opts){
+		if(typeof name !== 'string')throw '[TUNKJS]:the name of module is required when creating a module with tunk.createModule().';
+		opts = opts || {};
+		opts.name = name;
+		createModule(module, opts); 
+	};
 
 	hooks.initModule=function(module, store, moduleName, opts){ return new module(); };
 	function createModule(module, opts) {
@@ -200,7 +205,7 @@
 		}else return protos[protoName];
 	}
 	function constructModule(module, opts){
-		var name = module.name;
+		var name = opts.name;
 
 		var protos = module.prototype;
 
