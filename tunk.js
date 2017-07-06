@@ -39,26 +39,36 @@
 		}
 	}
 
-	tunk.create = function (name, opts) {
-		if(typeof name === 'string') {
-			if(typeof opts === 'function'){
-				return createModule(opts, {name: name});
-			}else{
-				opts = opts || {};
-				opts.name = name;
-				return function (target, property, descriptor) {
-					return createModule(target, opts);
-				};
-			}
-		} else {
-			throw '[TUNKJS]:the name of module is required when creating a module with @create().';
+	tunk.create = function () {
+
+		let name, opts = {};
+		if(typeof arguments[0] === 'function'){
+			if(!arguments[0].__getName__) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or use webpack plugin tunk-loader.';			
+			return createModule(arguments[0], {name: arguments[0].__getName__()});
 		}
+
+		if(arguments[0]) if(typeof arguments[0] === 'string'){
+			name = arguments[0];
+		}else if(typeof arguments[0] === 'object'){
+			opts = arguments[0];
+		}
+		if(arguments[1]) if(typeof arguments[1] === 'string'){
+			name = arguments[1];
+		}else if(typeof arguments[1] === 'object'){
+			opts = arguments[1];
+		}
+
+		return function (target, property, descriptor) {
+			opts.name = name || target.__getName__();
+			if(!opts.name) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or use webpack plugin tunk-loader.';
+			return createModule(target, opts);
+		};
 	}
 
 	tunk.createWatch = decorateWatcher;
 	tunk.createAction = decorateAction;
 	tunk.createModule = function(name, module, opts){
-		if(typeof name !== 'string')throw '[TUNKJS]:the name of module is required when creating a module with tunk.createModule().';
+		if(typeof name !== 'string') throw '[TUNKJS]:the name of module is required when creating a module with tunk.createModule().';
 		opts = opts || {};
 		opts.name = name;
 		createModule(module, opts); 
@@ -216,9 +226,13 @@
 		}
 
 		Object.assign(protos, mixins, {
-			getState: function getState(otherModuleName) {
-				if (!otherModuleName) return clone(store[name], opts.isolate);
-				else return clone(store[otherModuleName], modules[otherModuleName].moduleOptions.isolate);
+			getState: function getState(path) {
+				if (!path) return clone(store[name], opts.isolate);
+				else {
+					const statePath = path.split('.');
+					if(!modules[statePath[0]]) throw '[TUNKJS]:can\' not find the module ' + statePath[0];
+					return pathValue(statePath, modules[statePath[0]].moduleOptions);
+				}
 			}
 		});
 
@@ -308,7 +322,6 @@
 		function end(result) {
 			if (!result) return;
 			if (result.constructor !== Object) {
-				console.log(arguments);
 				throw '[TUNKJS]:the param of end should be a plain data object';
 			}
 			if(context.isWatcher) throw '[TUNKJS]:A watcher could not update store directly';
