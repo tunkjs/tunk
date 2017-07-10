@@ -41,7 +41,7 @@
 
 	tunk.create = function () {
 
-		let name, opts = {};
+		var name, opts = {};
 		if(typeof arguments[0] === 'function'){
 			if(!arguments[0].__getName__) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or use webpack plugin tunk-loader.';			
 			return createModule(arguments[0], {name: arguments[0].__getName__()});
@@ -229,7 +229,7 @@
 			getState: function getState(path) {
 				if (!path) return clone(store[name], opts.isolate);
 				else {
-					const statePath = path.split('.');
+					var statePath = path.split('.');
 					if(!modules[statePath[0]]) throw '[TUNKJS]:can\' not find the module ' + statePath[0];
 					return pathValue(statePath, modules[statePath[0]].moduleOptions);
 				}
