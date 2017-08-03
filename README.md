@@ -1,14 +1,13 @@
 ## Intro
 Tunk是一个APP开发的状态管理模式，可以与任何界面框架配合实现状态驱动界面更新。
 它采用集中式存储、分散式管理的方式去维护应用的状态，以状态管理模块中的动作定义来更新所属模块的状态来控制可预知的应用状态变化。
-
-## Why tunk?
-
 轻量 – tunk核心代码仅600多行，与之配套的tunk-vue、tunk-react也不过一两百行
-
 简洁 – 不同模块分散关注不同的业务数据的管理，模块责任划分简单、明确，以类的方式编写管理模块并支持继承，更便于逻辑抽象及代码复用
-
 高效 – 相对于给开发者增加多一块代码来实现 “控制可预知的状态更新” 的vuex和redux，tunk的实现方式具有更好的编程体验，模块的编写
+开放 - 核心代码提供丰富的切入式钩子，满足不同的业务架构需求
+
+
+## 
 
 ## Usage
 ````shell
@@ -19,7 +18,10 @@ npm install -S tunk-vue
 # 使用 REACT 配合开发
 npm install -S tunk-react
 ````
-以 tunk-vue作实例介绍
+
+## Examples
+
+#### index.js
 ````javascript
 //完成vue、tunk、tunk-vue的引入及绑定
 import Vue from 'vue';
@@ -28,6 +30,10 @@ import tunkVue from "tunk-vue";
 Vue.use(tunkVue(tunk));
 // 引入状态管理模块即可完成状态管理模块的初始化
 import './helloTunk';
+ ````
+ 
+ #### helloTunk.js
+ ````javascript
  
 //编写一个状态管理模块   helloTunk.js  （状态管理模块实际不存储状态数据，仅起管理作用）
 import {create, action} from 'tunk';
@@ -54,6 +60,8 @@ class helloTunk {
     }
 }
 ````
+
+#### HelloVue.vue
 ````vue
 //编写vue组件   HelloVue.vue
 <template>
@@ -73,5 +81,10 @@ export default {
 }
 </script>
 ````
+
+
+
+
+
 
 
