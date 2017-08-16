@@ -333,14 +333,27 @@
 
 
 
-
+	function handle_dispatch(moduleName, actionName, argsArray) {
+		if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
+		if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
+		if(!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method '+actionName+' of '+moduleName+' is not an action';
+		apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+	}
 
 
 
 	tunk.dispatch = function (moduleName, options) {
-		if (moduleName && moduleName.constructor === String)
-			hooks.storeNewState (options, moduleName, 'NONEACTION', configs);
-		else throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
+		if (moduleName && moduleName.constructor === String) {
+			if(moduleName.indexOf('.') === -1) {
+				hooks.storeNewState (options, moduleName, 'NONEACTION', configs);
+			} else {
+				moduleName = moduleName.split('.');
+                handle_dispatch(moduleName[0], moduleName[1], Array.prototype.slice.call(arguments, 1));
+			}
+			
+		} else {
+			throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
+		}
 	};
 
 	// tunk.hook(hookName, function(origin){
@@ -391,12 +404,7 @@
 		};
 	}
 	hooks.connectDispatch=function(target, name, handle){
-		target[name] = handle(function dispatch(moduleName, actionName, argsArray) {
-			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
-			if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
-			if(!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method '+actionName+' of '+moduleName+' is not an action';
-			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
-		});
+		target[name] = handle(handle_dispatch);
 	}
 	hooks.connectClean=function(target, stateOption){
 		var tmp;
