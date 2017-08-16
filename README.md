@@ -50,7 +50,7 @@ import './helloTunk';
  
 //编写一个状态管理模块   helloTunk.js  （状态管理模块实际不存储状态数据，仅起管理作用）
 import {create, action} from 'tunk';
-@create('helloTunk') // 类名通常会被压缩因此需要给create修饰器传入模块名
+@create('helloTunk') // 类名通常会被压缩因此需要给create修饰器传入模块名，可使用tunk-loader避免多次输入类名
 class helloTunk {
     constructor(){ 
         this.state = { //定义状态内容，将确定统一存储于状态树中的初始数据
