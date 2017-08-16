@@ -1,6 +1,5 @@
 (function() {
 
-
 	var apply = require('apply.js');
 
 	var store = {},
@@ -231,7 +230,9 @@
 				else {
 					var statePath = path.split('.');
 					if(!modules[statePath[0]]) throw '[TUNKJS]:can\' not find the module ' + statePath[0];
-					return pathValue(statePath, modules[statePath[0]].moduleOptions);
+					if(statePath.length === 1) 
+						return clone(store[statePath[0]], modules[statePath[0]].moduleOptions.isolate);
+					else return pathValue(statePath, modules[statePath[0]].moduleOptions);
 				}
 			}
 		});
@@ -470,7 +471,7 @@
                 return next(arguments);
             }
             promise.then(function(result){
-                setTimeout(function(){next([result]);});
+                next([result]);
             });
         };
     });
