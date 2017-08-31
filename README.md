@@ -16,7 +16,7 @@ tunk不限制使用数据请求插件，但我们也提供了支持Promise的 [t
 
 ## Wiki
 
-[Document](https://github.com/tunkjs/tunk)
+[Document](https://github.com/tunkjs/tunk/wiki)
 
 
 
@@ -50,14 +50,19 @@ import './helloTunk';
  
 //编写一个状态管理模块   helloTunk.js  （状态管理模块实际不存储状态数据，仅起管理作用）
 import {create, action} from 'tunk';
-@create('helloTunk') // 类名通常会被压缩因此需要给create修饰器传入模块名，可使用tunk-loader避免多次输入类名
+
+// 类名通常会被压缩因此需要给create修饰器传入模块名，可使用tunk-loader避免传入类名的繁琐
+@create('helloTunk') 
 class helloTunk {
     constructor(){ 
-        this.state = { //定义状态内容，将确定统一存储于状态树中的初始数据
+        //定义状态内容，将确定统一存储于状态树中的初始数据
+        this.state = { 
             text: ''
         };
     }
-    @action // 使用action修饰器定义changeText为状态更新的动作，所有动作仅能更新所属模块的状态
+
+    // 使用action修饰器定义changeText为状态更新的动作，所有动作仅能更新所属模块的状态
+    @action 
     changeText(n){
         // 通过返回一个数据对象来更新当前模块负责维护的状态，
         // 返回的内容通过可配置的隔离模式去更新状态树
@@ -79,16 +84,23 @@ class helloTunk {
 //编写vue组件   HelloVue.vue
 <template>
     <button @click=“say(Date.now() % 4)”> saySomething </button>
-    <button @click=“sayIOU()”> say IOU </button>
-     <section> {{text}}  </section>
+    <button @click=“saySomething()”> say IOU </button>
+    <section> {{text}}  </section>
 </template>
 <script>
 export default {
-    state:{text: 'helloTunk.text'},  // 绑定helloTunk模块中的text状态，后续可了解更多高效的绑定方式
-    action:{say: 'helloTunk.changeText'},  // 绑定helloTunk的动作
+    // 绑定helloTunk模块中的text状态，后续可了解更多高效的绑定方式
+    state:{
+        text: 'helloTunk.text'
+    },  
+    // 绑定helloTunk的动作
+    action:{
+        say: 'helloTunk.changeText'
+    },  
     methods:{
-        sayIOU(){
-            this.dispatch('helloTunk.changeText', 3);    //  也可通过dispatch方法调起未绑定的动作
+        saySomething(){
+            // 通过dispatch方法发起未绑定的动作执行
+            this.dispatch('helloTunk.changeText', 3);    
        }
    }
 }
