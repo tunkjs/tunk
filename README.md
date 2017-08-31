@@ -25,7 +25,7 @@ tunk的职责仅仅为动作驱动状态变更的简洁实现，本身并不包�
 
 [tunk-request](https://github.com/tunkjs/tunk-request)
 
-
+[tunk-loader](https://github.com/tunkjs/tunk-loader)
 
 
 
