@@ -16,7 +16,7 @@ tunk不限制使用数据请求插件，但我们也提供了支持Promise的 [t
 
 ## Wiki
 
-[Document](https://github.com/tunkjs/tunk/wiki)
+[Document](https://github.com/tunkjs/tunk/wiki/Tunk%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8)
 
 
 
