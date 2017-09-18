@@ -1,3 +1,10 @@
+/**
+ * 3.0.0 版本更新：
+ * 1、 添加 @config 为模块类单独添加配置
+ * 2、 继承父类的构造器初始化
+ * 3、 整理一些方法和传参
+ */
+
 (function() {
 
 	var apply = require('apply.js');
@@ -11,23 +18,18 @@
 		hooks={},
 		configs={
 			isolate: 'deep', // deep, shallow, none
-			async: false
+			strict: false, // true: 限制每个模块只允许更新在构造器定义过的字段
 		};
-
 
 	function tunk(conf) {
 		Object.assign(configs, conf);
 		return tunk;
 	}
 
-	tunk.configs = configs;
-
-	tunk.config = tunk;
-
 	tunk.watch = function (watchPath, opts) {
 		return function (target, property, descriptor) {
 			decorateWatcher(target[property], watchPath, opts);
-		}
+		};
 	}
 
 	tunk.action = function (opts, property) {
@@ -39,27 +41,27 @@
 	}
 
 	tunk.create = function () {
-
 		var name, opts = {};
-		if(typeof arguments[0] === 'function'){
-			if(!arguments[0].__getName__) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or use webpack plugin tunk-loader.';			
+
+		if(typeof arguments[0] === 'function') {
+			if(!arguments[0].__getName__) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';			
 			return createModule(arguments[0], {name: arguments[0].__getName__()});
 		}
 
-		if(arguments[0]) if(typeof arguments[0] === 'string'){
+		if(arguments[0]) if(typeof arguments[0] === 'string') {
 			name = arguments[0];
-		}else if(typeof arguments[0] === 'object'){
+		}else if(typeof arguments[0] === 'object') {
 			opts = arguments[0];
 		}
-		if(arguments[1]) if(typeof arguments[1] === 'string'){
+		if(arguments[1]) if(typeof arguments[1] === 'string') {
 			name = arguments[1];
-		}else if(typeof arguments[1] === 'object'){
+		}else if(typeof arguments[1] === 'object') {
 			opts = arguments[1];
 		}
 
 		return function (target, property, descriptor) {
-			opts.name = name || target.__getName__();
-			if(!opts.name) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or use webpack plugin tunk-loader.';
+			opts.name = name || opts.name || target.__getName__();
+			if(!opts.name) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
 			return createModule(target, opts);
 		};
 	}
@@ -72,20 +74,25 @@
 		opts.name = name;
 		createModule(module, opts); 
 	};
-
+	
 	hooks.initModule=function(module, store, moduleName, opts){ return new module(); };
 	function createModule(module, opts) {
 
 		var name = opts.name;
 
 		if(!name) throw '[TUNKJS]:the name of module was required.';
-		if(modules[name]) throw '[TUNKJS]:the module '+name+' already exists';
+		if(modules[name]) throw '[TUNKJS]:the module ' + name + ' already exists';
 
 		opts = Object.assign({}, configs, opts);
 
 		module = constructModule(module, opts);
 
 		modules[name] = hooks.initModule(module, store, name, opts);
+
+		Object.defineProperty(modules[name], "__stateFreezed__", {
+			value: false,
+			writable: false
+		});
 
 		var defaultState = modules[name].state;
 
@@ -114,7 +121,7 @@
 
 	hooks.callAction = function(dispatch, originAction, args, module, moduleName, actionName,  actionOptions){
 		var result = apply(originAction, args, module);
-		if (typeof result !== 'undefined') dispatch.call(module, result);
+		if (typeof result !== 'undefined') return dispatch.call(module, result);
 	}
 	function createAction(moduleName, actionName, originAction){
 
@@ -133,14 +140,7 @@
 			//数据&动作 建立关联
 			this.dispatch = dispatch;
 
-			if (configs.async) {
-				var args = arguments;
-				setTimeout(function () {
-					hooks.callAction(dispatch, originAction, args, modules[moduleName], moduleName, actionName, actionOptions);
-				}, 0);
-			} else {
-				hooks.callAction(dispatch, originAction, arguments, this, moduleName, actionName, actionOptions);
-			}
+			return hooks.callAction(dispatch, originAction, arguments, this, moduleName, actionName, actionOptions);
 
 			function dispatch() {
 				return run_middlewares(this, arguments, {
@@ -178,13 +178,7 @@
 			//数据&动作 建立关联
 			modules[moduleName].dispatch = dispatch;
 
-			if (configs.async) {
-				setTimeout(function () {
-					hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, modules[moduleName], moduleName, watcherName, watcherOptions);
-				})
-			}else{
-				hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, modules[moduleName], moduleName, watcherName, watcherOptions);
-			}
+			hooks.callWatcher(dispatch, watcher, newValue, watchingStatePath, watchingModule, fromAction, modules[moduleName], moduleName, watcherName, watcherOptions);
 
 			function dispatch() {
 				return run_middlewares(this, arguments, {
@@ -213,7 +207,8 @@
 			return createWatcher(moduleName, protoName, protos[protoName]);
 		}else return protos[protoName];
 	}
-	function constructModule(module, opts){
+	function constructModule(module, opts) {
+
 		var name = opts.name;
 
 		var protos = module.prototype;
@@ -237,7 +232,7 @@
 			}
 		});
 
-		protos.dispatch=dispatch;
+		protos.dispatch = dispatch;
 
 		protos.moduleOptions = opts;
 
@@ -259,11 +254,9 @@
 					return this.getState();
 				},
 				set: function (state) {
-					if(!store[name]) {
-						if(typeof defaultState !=='undefined' && typeof defaultState !=='object'){
-							throw '[TUNKJS]:object type of the default state is required';
-						}
-						store[name] = Object.assign({}, clone(state, opts.isolate));
+					if(!this.__stateFreezed__) {
+						if(store[name]) Object.assign(store[name], clone(state, opts.isolate));
+						else store[name] = clone(state, opts.isolate);
 					} else throw '[TUNKJS]:you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
 			}
@@ -309,6 +302,7 @@
 
 
 	function run_middlewares(module, args, context, dispatch) {
+
 		var index = 0;
 
 		return next(args);
@@ -317,30 +311,56 @@
 			if (typeof args !== 'object' || isNaN(args.length)) throw '[TUNKJS]:the param of next should be type of array or arguments';
 			if (index < middlewares.length)
 				return apply(middlewares[index++](dispatch, next, end, context), args, module);
-			else return end(args[0]);
+			else {
+				if(args[0] && typeof args[0] === 'object' ){
+					if(typeof args[0].then !== 'function'){
+						return end(args[0]);
+					}else {
+						return args[0].then(function(data) {
+							if(typeof data === 'object' && typeof args[0].then !== 'function') {
+								return end(data);
+							}else {
+								index = 0;
+								return next(data);
+							}
+						});
+					}
+				} else{
+					return args[0];
+				}
+			}
 		}
 
 		function end(result) {
-			if (!result) return;
-			if (result.constructor !== Object) {
-				throw '[TUNKJS]:the param of end should be a plain data object';
-			}
 			if(context.isWatcher) throw '[TUNKJS]:A watcher could not update store directly';
-			index = middlewares.length;
 			hooks.storeNewState(result, context.moduleName, context.actionName, context.options);
+			return clone(result, context.options.isolate);
 		}
 	}
 
 
 
-
+	function handle_dispatch(moduleName, actionName, argsArray) {
+		if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
+		if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
+		if(!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method '+actionName+' of '+moduleName+' is not an action';
+		return apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+	}
 
 
 
 	tunk.dispatch = function (moduleName, options) {
-		if (moduleName && moduleName.constructor === String)
-			hooks.storeNewState (options, moduleName, 'NONEACTION', configs);
-		else throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
+		if (moduleName && moduleName.constructor === String) {
+			if(moduleName.indexOf('.') === -1) {
+				hooks.storeNewState (options, moduleName, 'NONEACTION', configs);
+			} else {
+				moduleName = moduleName.split('.');
+                return handle_dispatch(moduleName[0], moduleName[1], Array.prototype.slice.call(arguments, 1));
+			}
+			
+		} else {
+			throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
+		}
 	};
 
 	// tunk.hook(hookName, function(origin){
@@ -350,7 +370,7 @@
 
 	// 		}
 	// });
-	//Aspect Programming
+	// Aspect Oriented Programming
 	tunk.hook = function(hookName, func){
 
 		var originHook = hooks[hookName];
@@ -391,12 +411,7 @@
 		};
 	}
 	hooks.connectDispatch=function(target, name, handle){
-		target[name] = handle(function dispatch(moduleName, actionName, argsArray) {
-			if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
-			if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
-			if(!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method '+actionName+' of '+moduleName+' is not an action';
-			apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
-		});
+		target[name] = handle(handle_dispatch);
 	}
 	hooks.connectClean=function(target, stateOption){
 		var tmp;
@@ -455,13 +470,13 @@
         return function(name, options){
             if(typeof name !== 'string') {
                 return next(arguments);
-            }
+            } 
             if (name.indexOf('.') === -1) name = [context.moduleName, name];
             else name = name.split('.');
             if (!context.modules[name[0]]) throw '[TUNKJS]:unknown module name ' + name[0];
             if (!context.modules[name[0]][name[1]]) throw '[TUNKJS]:unknown action name ' + name[1] + ' of ' + name[0];
             if(!context.modules[name[0]][name[1]].actionOptions ) throw '[TUNKJS]:the method '+name[1]+' of '+name[0]+' is not an action';
-            return apply(context.modules[name[0]][name[1]], Array.prototype.slice.call(arguments,1), context.modules[name[0]]);
+			return apply(context.modules[name[0]][name[1]], Array.prototype.slice.call(arguments,1), context.modules[name[0]]);
         };
     });
 	// promise middleware
@@ -470,8 +485,8 @@
             if(typeof promise !== 'object' || !promise.then) {
                 return next(arguments);
             }
-            promise.then(function(result){
-                next([result]);
+            return promise.then(function(result){
+                return next([result]);
             });
         };
     });
@@ -484,7 +499,7 @@
 
             var result = apply(func,[this.getState()], this);
             if(typeof result !=='undefined')
-                next([result]);
+				return next([result]);
 
         };
     });
