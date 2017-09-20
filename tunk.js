@@ -36,15 +36,15 @@
 
 	tunk.watch = function (watchPath, opts) {
 		return function (target, property, descriptor) {
-			decorateWatcher(target[property], watchPath, opts);
+			_decorateWatcher(target[property], watchPath, opts);
 		};
 	}
 
 	tunk.action = function (opts, property) {
 		if (typeof property === 'string' && opts[property]) {
-			return decorateAction(opts[property], {});
+			return _decorateAction(opts[property], {});
 		} else return function (target, property, descriptor) {
-			return decorateAction(target[property], opts);
+			return _decorateAction(target[property], opts);
 		}
 	}
 
@@ -53,7 +53,7 @@
 
 		if (typeof arguments[0] === 'function') {
 			if (!arguments[0].__getName__) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
-			createModule(arguments[0], { name: arguments[0].__getName__() });
+			_createModule(arguments[0], { name: arguments[0].__getName__() });
 		}
 
 		if (arguments[0]) if (typeof arguments[0] === 'string') {
@@ -70,17 +70,17 @@
 		return function (target, property, descriptor) {
 			opts.name = name || opts.name || target.__getName__();
 			if (!opts.name) throw '[TUNKJS]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
-			createModule(target, opts); 
+			_createModule(target, opts); 
 		};
 	}
 
-	tunk.createWatch = decorateWatcher;
-	tunk.createAction = decorateAction;
+	tunk.createWatch = _decorateWatcher;
+	tunk.createAction = _decorateAction;
 	tunk.createModule = function (name, module, opts) {
 		if (typeof name !== 'string') throw '[TUNKJS]:the name of module is required when creating a module with tunk.createModule().';
 		opts = opts || {};
 		opts.name = name;
-		createModule(module, opts);
+		_createModule(module, opts);
 	};
 
 	tunk.dispatch = function (moduleName, options) {
@@ -89,7 +89,7 @@
 				hooks.storeNewState(options, moduleName, configs);
 			} else {
 				moduleName = moduleName.split('.');
-				return dispatchAction(moduleName[0], moduleName[1], Array.prototype.slice.call(arguments, 1));
+				return _dispatchAction(moduleName[0], moduleName[1], Array.prototype.slice.call(arguments, 1));
 			}
 		} else {
 			throw '[TUNKJS]:the first argument should be a module name and the second shuould be a plain object';
@@ -97,7 +97,7 @@
 	};
 
 	var hooks = {
-		initModule : function (module, store, moduleName, opts) { 
+		initModule : function (module, options) { 
 			return new module(); 
 		},
 		callWatcher : function (originWatcher, newValue, module, watcherOptions) {
@@ -115,9 +115,9 @@
 		},
 		override : function (moduleName, protos, protoName) {
 			if (protos[protoName].actionOptions) {
-				return createAction(moduleName, protoName, protos[protoName]);
+				return _createAction(moduleName, protoName, protos[protoName]);
 			} else if (protos[protoName].watcherOptions) {
-				return createWatcher(moduleName, protoName, protos[protoName]);
+				return _createWatcher(moduleName, protoName, protos[protoName]);
 			} else return protos[protoName];
 		},
 		store : function (state, changedState, options) {
@@ -169,7 +169,7 @@
 			};
 		},
 		connectDispatch = function (target, name, handle) {
-			target[name] = handle(dispatchAction);
+			target[name] = handle(_dispatchAction);
 		},
 		connectClean = function (target, stateOption) {
 			var tmp;
@@ -272,7 +272,7 @@
 
 
 
-	function createModule(module, opts) {
+	function _createModule(module, opts) {
 
 		var name = opts.name;
 
@@ -281,11 +281,11 @@
 
 		opts = Object.assign({}, configs, opts);
 
-		module = constructModule(module, opts);
+		module = _constructModule(module, opts);
 
-		modules[name] = hooks.initModule(module, store, name, opts);
+		modules[name] = hooks.initModule(module, opts);
 
-		defineHiddenProps(modules[name], {__stateFreezed__: false})
+		_defineHiddenProps(modules[name], {__stateFreezed__: false})
 
 		var defaultState = modules[name].state;
 
@@ -297,7 +297,7 @@
 
 	}
 
-	function decorateWatcher(target, watchPath, opts) {
+	function _decorateWatcher(target, watchPath, opts) {
 		if (typeof watchPath !== 'string' || (watchPath = watchPath.split('.')).length !== 2)
 			throw '[TUNKJS]:the path you watch should be like moduleName.stateName';
 		opts = Object.assign({ watchPath: watchPath }, opts);
@@ -305,14 +305,14 @@
 		return target;
 	}
 
-	function decorateAction(target, opts) {
+	function _decorateAction(target, opts) {
 		if (target.watcherOptions) throw '[TUNKJS]:you can not set a watcher method to be an action';
 		target.actionOptions = Object.assign({}, opts);
 		return target;
 	}
 
 	
-	function createAction(moduleName, actionName, originAction) {
+	function _createAction(moduleName, actionName, originAction) {
 		return action;
 		function action() {
 			var prevOpts = this.dispatch.options, 
@@ -326,7 +326,7 @@
 	}
 
 	
-	function createWatcher(moduleName, watcherName, originWatcher) {
+	function _createWatcher(moduleName, watcherName, originWatcher) {
 
 		var watchPath = originWatcher.watcherOptions.watchPath;
 
@@ -345,18 +345,18 @@
 			hooks.callWatcher(originWatcher, newValue, modules[moduleName], watcherOptions);
 			modules[moduleName].dispatch.options = preOpts;
 		}
-		return banCallingWatcher;
+		return _banCallingWatcher;
 	}
 
-	function banCallingWatcher() { throw '[TUNKJS]:you can\'t call watcher directly'; }
+	function _banCallingWatcher() { throw '[TUNKJS]:you can\'t call watcher directly'; }
 
-	function constructModule(module, opts) {
+	function _constructModule(module, opts) {
 
 		var name = opts.moduleName = opts.name;
 
 		var protos = module.prototype;
 
-		var properties = getProperties(module);
+		var properties = _getProperties(module);
 
 		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
 			protos[properties[i]] = hooks.override(name, protos, properties[i]);
@@ -378,10 +378,10 @@
 
 		protos.moduleOptions = opts;
 
-		defineHiddenProps(protos, protos);
+		_defineHiddenProps(protos, protos);
 
 		function dispatch() {
-			return run_middlewares(this, arguments, {
+			return _run_middlewares(this, arguments, {
 				options: dispatch.options || protos.moduleOptions,
 				modules: modules,
 				store: store,
@@ -405,7 +405,7 @@
 		return module;
 	}
 
-	function run_middlewares(module, args, context, dispatch) {
+	function _run_middlewares(module, args, context, dispatch) {
 
 		var index = 0;
 
@@ -442,14 +442,14 @@
 		}
 	}
 
-	function dispatchAction(moduleName, actionName, argsArray) {
+	function _dispatchAction(moduleName, actionName, argsArray) {
 		if (!modules[moduleName]) throw '[TUNKJS]:unknown module name ' + moduleName + '.';
 		if (!modules[moduleName][actionName]) throw '[TUNKJS]:unknown action name ' + actionName + ' of ' + moduleName + '';
 		if (!modules[moduleName][actionName].actionOptions) throw '[TUNKJS]:the method ' + actionName + ' of ' + moduleName + ' is not an action';
 		return apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
 	}
 
-	function defineHiddenProps(obj, props) {
+	function _defineHiddenProps(obj, props) {
 		for (var x in props) {
 			Object.defineProperty(obj, x, {
 				value: props[x],
@@ -460,7 +460,7 @@
 		}
 	}
 
-	function getProperties(clas) {
+	function _getProperties(clas) {
 		var proto = clas.prototype;
 		var protos = Object.getOwnPropertyNames(proto), properties;
 		while (proto.__proto__ && proto.__proto__.constructor.name !== 'Object') {
