@@ -205,7 +205,6 @@
 		}
 	};
 
-
 	var connection = {
 		state: function (targetObject, propName, statePath) {
 			if (!statePath[0] || !modules[statePath[0]]) throw '[tunk]:unknown module name:' + statePath[0];
