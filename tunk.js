@@ -24,10 +24,12 @@
 					configs,
 					store,
 					modules,
-					connect: connection,
+					//connect: connection,
+					hooks,
 					hook,
 					addMiddleware,
-					mixin
+					mixin,
+					dispatchAction
 				}], tunk);
 			}
 		} else throw '[tunk]:the param of Array is required';
@@ -75,16 +77,28 @@
 		return target;
 	};
 	
+	/**
+	tunk.createModule('Ajax', {
+		constructor:function Ajax(){},
+		get:creatAction(function(){}, {}),
+		base(){},
+	}, options);
+	 */
 	tunk.createModule = function (moduleName, module, opts) {
 		if (typeof moduleName !== 'string') throw '[tunk]:the name of module is required when creating a module with tunk.createModule().';
-		hooks.createModule(module, Object.assign({moduleName: moduleName}, configs, opts));
+		if(!module || !module.constructor === Object || !module.constructor || !module.constructor === Object) {
+			throw '[tunk]:the second param as the prototype of the module class should be an object and had its constructor.';
+		}
+		var constructor = module.constructor;
+		constructor.prototype = module;
+		hooks.createModule(constructor, Object.assign({moduleName: moduleName}, configs, opts));
 	};
 
 	tunk.dispatch = function (name) {
 		if (name && name.constructor === String) {
 			name = name.split('.');
 			if (name.length === 2) {
-				return _dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1));
+				return dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1));
 			}
 		}
 		throw 'wrong arguments';
@@ -170,7 +184,7 @@
 			}
 
 			function end(result) {
-				_storeNewState(result, options.moduleName, options);
+				hooks.store(store[options.moduleName], result, options);
 				return result;
 			}
 		},
@@ -179,10 +193,8 @@
 			Object.assign(state, newState);
 		},
 
-		updateComponentState: function (componentObject, propName, newValue, options) { },
-
 		// 支持5层
-		// 监测变更，做数据缓存，提升性能
+		// 性能有待提升
 		getValueFromStore: function (statePath, options) {
 			if (typeof statePath === 'string') return store[statePath];
 			var state = store[statePath[0]];
@@ -205,54 +217,6 @@
 		}
 	};
 
-	var connection = {
-		state: function (targetObject, propName, statePath) {
-			if (!statePath[0] || !modules[statePath[0]]) throw '[tunk]:unknown module name:' + statePath[0];
-			connections[statePath[0]] = connections[statePath[0]] || [];
-			connections[statePath[0]].push({
-				comp: targetObject,
-				propName: propName,
-				statePath: statePath,
-			});
-			targetObject._tunkOptions_ = targetObject._tunkOptions_ || {};
-			targetObject._tunkOptions_[propName] = statePath;
-			//返回组件默认数据
-			return hooks.getValueFromStore(statePath, modules[statePath[0]].options);
-		},
-		action: function (target, propName, moduleName, actionName) {
-			target[propName] = function () {
-				_dispatchAction(moduleName, actionName, arguments)
-			};
-		},
-
-		dispatch: function (target, dispatchName, handle, options) {
-			target[dispatchName] = handle(_dispatchAction);
-		},
-
-		clean: function (target) {
-			if (target._tunkOptions_) {
-				var stateOption = target._tunkOptions_;
-				var tmp;
-				for (var x in stateOption) {
-					tmp = [];
-					for (var i = 0, l = connections[stateOption[x][0]].length; i < l; i++) {
-						if (connections[stateOption[x][0]][i].comp !== target) tmp.push(connections[stateOption[x][0]][i]);
-					}
-					connections[stateOption[x][0]] = tmp;
-				}
-			}
-		},
-
-		getState: function (moduleName) {
-			if (!modules[moduleName]) throw '[tunk]:unknown module name ' + moduleName;
-			return store[moduleName];
-		},
-
-		getModule: function (moduleName) {
-			if (!modules[moduleName]) throw '[tunk]:unknown module name ' + moduleName;
-			return modules[moduleName];
-		},
-	};
 
 	// tunk.hook(hookName, function(origin){
 	// 		return function(...args){
@@ -274,14 +238,20 @@
 			middlewares = middlewares.concat(middleware);
 		else if (typeof middleware === 'function') middlewares.push(middleware);
 		return tunk;
-	};
+	}
 
 	function mixin(obj) {
 		Object.assign(mixins, obj);
 		return tunk;
-	};
+	}
 
 
+	function dispatchAction(moduleName, actionName, argsArray) {
+		if (!modules[moduleName]) throw '[tunk]:unknown module name ' + moduleName + '.';
+		if (!modules[moduleName][actionName]) throw '[tunk]:unknown action name ' + actionName + ' of ' + moduleName + '';
+		if (!modules[moduleName][actionName].options || !modules[moduleName][actionName].options.isAction) throw '[tunk]:the method ' + actionName + ' of ' + moduleName + ' is not an action';
+		return apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+	}
 
 
 
@@ -360,12 +330,6 @@
 		}
 	}
 
-	function _dispatchAction(moduleName, actionName, argsArray) {
-		if (!modules[moduleName]) throw '[tunk]:unknown module name ' + moduleName + '.';
-		if (!modules[moduleName][actionName]) throw '[tunk]:unknown action name ' + actionName + ' of ' + moduleName + '';
-		if (!modules[moduleName][actionName].options || !modules[moduleName][actionName].options.isAction) throw '[tunk]:the method ' + actionName + ' of ' + moduleName + ' is not an action';
-		return apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
-	}
 
 	function _defineHiddenProps(obj, props) {
 		for (var x in props) {
@@ -376,26 +340,6 @@
 				configurable: false
 			});
 		}
-	}
-
-	function _storeNewState(newState, moduleName, options) {
-		var pipes = connections[moduleName],
-			changedFields = Object.keys(newState),
-			statePath;
-
-		hooks.store(store[moduleName], newState, options);
-
-		setTimeout(function () {
-			if (pipes && pipes.length) for (var i = 0, l = pipes.length; i < l; i++) if (pipes[i]) {
-				statePath = pipes[i].statePath;
-				// 只更新 changedFields 字段
-				if (statePath[1] && changedFields.indexOf(statePath[1]) === -1) continue;
-				//减少克隆次数，分发出去到达 View 的数据用同一个副本，减少调用 hooks.getValueFromStore
-				hooks.updateComponentState(pipes[i].comp, pipes[i].propName, hooks.getValueFromStore(statePath, options), options);
-			}
-		});
-
-		return newState;
 	}
 
 	function _getProperties(clas) {
@@ -420,7 +364,7 @@
 			}
 			if (name.indexOf('.') === -1) name = [options.moduleName, name];
 			else name = name.split('.');
-			return _dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1))
+			return dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1))
 		};
 	});
 
