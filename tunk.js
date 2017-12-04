@@ -5,7 +5,6 @@
 
 	var store = {},
 		modules = {},
-		connections = [],
 		mixins = {},
 		middlewares = [],
 		configs = {};
@@ -21,15 +20,14 @@
 		if (plugins && plugins.constructor === Array) {
 			for (var i = 0; i < plugins.length; i++) {
 				apply(plugins[i], [{
-					configs,
-					store,
-					modules,
-					//connect: connection,
-					hooks,
-					hook,
-					addMiddleware,
-					mixin,
-					dispatchAction
+					configs: configs,
+					store: store,
+					modules: modules,
+					hooks: hooks,
+					hook: hook,
+					addMiddleware: addMiddleware,
+					mixin: mixin,
+					dispatchAction: dispatchAction
 				}], tunk);
 			}
 		} else throw '[tunk]:the param of Array is required';
@@ -142,7 +140,7 @@
 		callAction: function (originAction, args, module, options) {
 			var result = apply(originAction, args, module);
 			// 处理异步动作返回的promise
-			if (typeof result === 'object' && result.then) {
+			if (result && typeof result === 'object' && result.then) {
 				return result.then(function (data) {
 					var prevOpts = module.dispatch.options;
 					module.dispatch.options = options;
@@ -157,7 +155,7 @@
 		},
 
 		runMiddlewares: function (module, args, context, dispatch, options) {
-			var index = 0, 
+			var index = 0,
 				checkEndlessLoop = 0;
 			return next(args);
 			function next(args) {
@@ -352,7 +350,6 @@
 			}
 			proto = proto.__proto__;
 		}
-
 		return protos;
 	}
 
