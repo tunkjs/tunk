@@ -16,7 +16,7 @@ npm install tunk -S
 
 ## Wiki
 
-[Document](https://github.com/tunkjs/tunk/wiki/Tunk%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8)
+[快速入门](https://github.com/tunkjs/tunk/wiki/Tunk%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8)
 
 ## 相关资源
 
@@ -25,5 +25,9 @@ npm install tunk -S
 [tunk-react](https://github.com/tunkjs/tunk-react) 
 
 [tunk-request](https://github.com/tunkjs/tunk-request)
+
+[tunk-isolate](https://github.com/tunkjs/tunk-isolate)
+
+[tunk-debug](https://github.com/tunkjs/tunk-debug)
 
 [tunk-loader](https://github.com/tunkjs/tunk-loader)
