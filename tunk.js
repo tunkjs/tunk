@@ -119,7 +119,7 @@
 
 			var defaultState = modules[moduleName].state;
 
-			if (typeof defaultState !== 'undefined' && typeof defaultState !== 'object') {
+			if (!defaultState || typeof defaultState !== 'object') {
 				throw '[tunk]:object type of the default state is required';
 			} else if (typeof defaultState === 'undefined') store[moduleName] = {};
 
@@ -142,6 +142,7 @@
 			// 处理异步动作返回的promise
 			if (result && typeof result === 'object' && result.then) {
 				return result.then(function (data) {
+					if(!data) return data;
 					var prevOpts = module.dispatch.options;
 					module.dispatch.options = options;
 					var result = module.dispatch(data);
@@ -149,7 +150,7 @@
 					return result;
 				});
 			}
-			if (typeof result !== 'undefined') {
+			if (result) {
 				return module.dispatch(result);
 			}
 		},
@@ -159,24 +160,26 @@
 				checkEndlessLoop = 0;
 			return next(args);
 			function next(args) {
+				if(!args[0]) return args[0];
 				if(checkEndlessLoop++ > 1024) throw '[tunk]: Endless loop in middlewares.';
 				if (typeof args !== 'object' || isNaN(args.length)) throw '[tunk]:the param of next should be type of array or arguments';
-				if (index < middlewares.length) 
+				if (index < middlewares.length) {
 					return apply(middlewares[index++](dispatch, next, end, context, options), args, module);
-				else {
+				} else {
 					if (args[0] && typeof args[0] === 'object') {
 						if (typeof args[0].then !== 'function') {
 							return end(args[0]);
 						} else {
 							return args[0].then(function (result) {
 								// 值变更应重走中间件 promise --> result
+								if(!result) return result;
 								index = 0;
 								return next(result);
 							});
 						}
 					} else {
 						index = 0;
-						return next(result);
+						return next(args);
 					}
 				}
 			}
