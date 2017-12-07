@@ -78,7 +78,7 @@
 	/**
 	tunk.createModule('Ajax', {
 		constructor:function Ajax(){},
-		get:creatAction(function(){}, {}),
+		get:tunk.creatAction(function(){}, {}),
 		base(){},
 	}, options);
 	 */

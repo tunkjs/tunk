@@ -22,9 +22,10 @@
   },
   "bugs": "https://github.com/tunkjs/tunk/issues",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jasmine JASMINE_CONFIG_PATH=test/jasmine.json"
   },
   "dependencies": {
-    "apply.js":"latest"
+    "apply.js": "latest",
+    "jasmine": "^2.8.0"
   }
 }
