@@ -1,7 +1,7 @@
 {
   "spec_dir": "test",
   "spec_files": [
-    "**/*.spec.js"
+    "**/tunk.*.js"
   ],
   "helpers": [
     "setup.js"

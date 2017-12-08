@@ -3,16 +3,38 @@
 
 	var apply = require('apply.js');
 
-	var store = {},
+	var store,
 		modules = {},
 		mixins = {},
 		middlewares = [],
 		configs = {};
-
-	function tunk() { }
+	
+	
+	(function(){
+		var _store = {};
+		function Store() {}
+		Store.constructor = Store;
+		_defineHiddenProps(Store.prototype, {
+			getState : function(moduleName){
+				return _store[moduleName];
+			}, 
+			setState: function(moduleName, state){
+				if(_store[moduleName]) assign(_store[moduleName], state);
+				else if(state) _store[moduleName] = assign({}, state);
+			}
+		});
+		store = new Store();
+	})();
+	
+	function tunk(_store) {
+		if(_store) store = _store;
+		if(!store.setState || !store.getState) {
+			throw '[tunk]: store object should had two methods setState & getState';
+		}
+	}
 
 	tunk.config = function (conf) {
-		Object.assign(configs, conf);
+		assign(configs, conf);
 		return tunk;
 	}
 
@@ -21,8 +43,8 @@
 			for (var i = 0; i < plugins.length; i++) {
 				apply(plugins[i], [{
 					configs: configs,
-					store: store,
 					modules: modules,
+					store: store,
 					hooks: hooks,
 					hook: hook,
 					addMiddleware: addMiddleware,
@@ -39,7 +61,7 @@
 			opts[property].options = { isAction: true };
 			return opts[property];
 		} else return function (target, property, descriptor) {
-			target[property].options = Object.assign({ isAction: true }, opts);
+			target[property].options = assign({ isAction: true }, opts);
 			return target[property];
 		}
 	}
@@ -49,7 +71,7 @@
 
 		if (typeof arguments[0] === 'function') {
 			if (!arguments[0].__getName__) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
-			hooks.createModule(arguments[0], Object.assign({ moduleName: arguments[0].__getName__() }, configs));
+			return hooks.createModule(arguments[0], assign({ moduleName: arguments[0].__getName__() }, configs));
 		}
 
 		if (arguments[0]) if (typeof arguments[0] === 'string') {
@@ -64,14 +86,15 @@
 		}
 
 		return function (target, property, descriptor) {
-			opts = Object.assign({moduleName: moduleName || opts.name || target.__getName__()}, configs, opts);
-			if (!opts.moduleName) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
+			moduleName = moduleName || opts && opts.name || target.__getName__ && target.__getName__();
+			if(!moduleName) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
+			opts = assign({moduleName: moduleName}, configs, opts);
 			hooks.createModule(target, opts);
 		};
 	}
 
 	tunk.createAction = function (target, opts) {
-		target.options = Object.assign({ isAction: true }, opts);
+		target.options = assign({ isAction: true }, opts);
 		return target;
 	};
 	
@@ -89,7 +112,7 @@
 		}
 		var constructor = module.constructor;
 		constructor.prototype = module;
-		hooks.createModule(constructor, Object.assign({moduleName: moduleName}, configs, opts));
+		hooks.createModule(constructor, assign({moduleName: moduleName}, configs, opts));
 	};
 
 	tunk.dispatch = function (name) {
@@ -121,7 +144,7 @@
 
 			if (!defaultState || typeof defaultState !== 'object') {
 				throw '[tunk]:object type of the default state is required';
-			} else if (typeof defaultState === 'undefined') store[moduleName] = {};
+			} else if (typeof defaultState === 'undefined') store.setState(moduleName, {});
 
 			return modules[moduleName];
 
@@ -164,17 +187,23 @@
 				if(checkEndlessLoop++ > 1024) throw '[tunk]: Endless loop in middlewares.';
 				if (typeof args !== 'object' || isNaN(args.length)) throw '[tunk]:the param of next should be type of array or arguments';
 				if (index < middlewares.length) {
-					return apply(middlewares[index++](dispatch, next, end, context, options), args, module);
+					let result;
+					try{
+						result = apply(middlewares[index++](dispatch, next, end, context, options), args, module);
+					}catch(e) {
+						console.error('[tunk]', e, middlewares[index++], args, options, module);
+					}
+					return result;
 				} else {
 					if (args[0] && typeof args[0] === 'object') {
 						if (typeof args[0].then !== 'function') {
-							return end(args[0]);
+							return end(args);
 						} else {
 							return args[0].then(function (result) {
 								// 值变更应重走中间件 promise --> result
 								if(!result) return result;
 								index = 0;
-								return next(result);
+								return next([result]);
 							});
 						}
 					} else {
@@ -185,20 +214,20 @@
 			}
 
 			function end(result) {
-				hooks.store(store[options.moduleName], result, options);
+				hooks.store(result[0], options);
 				return result;
 			}
 		},
 
-		store: function (state, newState, options) {
-			Object.assign(state, newState);
+		store: function (newState, options) {
+			store.setState(options.moduleName, newState);
 		},
 
 		// 支持5层
 		// 性能有待提升
-		getValueFromStore: function (statePath, options) {
-			if (typeof statePath === 'string') return store[statePath];
-			var state = store[statePath[0]];
+		getValueByPath: function (statePath, options) {
+			if (typeof statePath === 'string') return store.getState(statePath);
+			var state = store.getState(statePath[0]);
 			if (!statePath[1]) return state;
 			else {
 				state = isNaN(statePath[1]) ? state[statePath[1]] : (state[statePath[1]] || state[parseInt(statePath[1])]);
@@ -220,8 +249,9 @@
 
 
 	// tunk.hook(hookName, function(origin){
-	// 		return function(...args){
-	//			return origin.call(null, args); 
+	// 		return function(arg1, arg2, arg3 ...){
+	//			... your code
+	//			return origin.call(null, arg1, arg2, arg3 ...); 
 	// 		}
 	// });
 	// Aspect Oriented Programming
@@ -234,6 +264,15 @@
 		hooks[hookName] = func;
 	}
 
+	/**
+	 * 
+	 * utils.addMiddleware([function (dispatch, next, end, context, options) {
+			return function () {
+				if(ok) return end(arguments);
+				return next(arguments);
+			}
+		}]);
+	 */
 	function addMiddleware(middleware) {
 		if (typeof middleware === 'object' && middleware.constructor === Array)
 			middlewares = middlewares.concat(middleware);
@@ -242,7 +281,7 @@
 	}
 
 	function mixin(obj) {
-		Object.assign(mixins, obj);
+		assign(mixins, obj);
 		return tunk;
 	}
 
@@ -251,7 +290,7 @@
 		if (!modules[moduleName]) throw '[tunk]:unknown module name ' + moduleName + '.';
 		if (!modules[moduleName][actionName]) throw '[tunk]:unknown action name ' + actionName + ' of ' + moduleName + '';
 		if (!modules[moduleName][actionName].options || !modules[moduleName][actionName].options.isAction) throw '[tunk]:the method ' + actionName + ' of ' + moduleName + ' is not an action';
-		return apply(modules[moduleName][actionName], argsArray, modules[moduleName]);
+		return apply(modules[moduleName][actionName], argsArray || [], modules[moduleName]);
 	}
 
 
@@ -265,18 +304,18 @@
 		var properties = _getProperties(module);
 
 		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
-			protos[properties[i]] = hooks.override(moduleName, protos, properties[i], Object.assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
+			protos[properties[i]] = hooks.override(moduleName, protos, properties[i], assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
 		}
 
-		Object.assign(protos, mixins, protos, {
+		assign(protos, mixins, protos, {
 			getState: function getState(path) {
-				if (!path) return hooks.getValueFromStore(moduleName, this.options);
+				if (!path) return hooks.getValueByPath(moduleName, this.options);
 				else {
 					var statePath = path.split('.');
 					if (!modules[statePath[0]]) throw '[tunk]:can\' not find the module ' + statePath[0];
 					if (statePath.length === 1)
-						return hooks.getValueFromStore(statePath[0], modules[statePath[0]].options);
-					else return hooks.getValueFromStore(statePath, modules[statePath[0]].options);
+						return hooks.getValueByPath(statePath[0], modules[statePath[0]].options);
+					else return hooks.getValueByPath(statePath, modules[statePath[0]].options);
 				}
 			},
 			dispatch: dispatch
@@ -300,13 +339,12 @@
 				},
 				set: function (state) {
 					if (!this.__stateFreezed__) {
-						if (store[moduleName]) Object.assign(store[moduleName], state);
-						else store[moduleName] = Object.assign({}, state);
+						if (store.getState(moduleName)) store.setState(moduleName, state);
+						else store.setState(moduleName, state);
 					} else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
 			}
 		});
-
 		return module;
 	}
 
@@ -354,6 +392,16 @@
 			proto = proto.__proto__;
 		}
 		return protos;
+	}
+
+	function assign(){
+		var args = arguments;
+		for(var i = 0, l = args.length; i < l; i++) {
+			if(args[i + 1] && typeof args[i + 1] === 'object') for( var x in args[i + 1]){
+				args[0][x] = args[i + 1][x];
+			}
+		}
+		return args[0];
 	}
 
 	// action middleware, the first middleware
