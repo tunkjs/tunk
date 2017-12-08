@@ -1,6 +1,5 @@
 
 var tunk = require('../tunk.js')
-var log =console.log;
 
 describe('tunk.create', function () {
   

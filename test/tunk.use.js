@@ -15,14 +15,55 @@ describe('tunk.use', function () {
                 !!utils.dispatchAction).toBe(true);
         });
 
-        beforeEach(function () {
-            for (var x in utils.modules) utils.modules[x] = null;
-            for (var x in utils.configs) delete utils.configs[x];
-        });
 
-        afterEach(function () {
-            for (var x in utils.modules) utils.modules[x] = null;
-            for (var x in utils.configs) delete utils.configs[x];
+
+        describe('utils.store', function () {
+            describe('use custome store', function () {
+                // beforeEach(function () {
+                //     for (var x in utils.modules) utils.modules[x] = null;
+                //     //tunk();
+                // });
+                var store = {};
+                function DataObj(val) { this.inner = val; }
+
+                tunk({
+                    getState: function (key) {
+                        return store[key];
+                    },
+                    setState: function (key, val) {
+                        if (val && val.constructor === DataObj) store[key] = val;
+                        else store[key] = new DataObj(val);
+                    }
+                });
+
+                it('state in store', function () {
+                    var mark;
+                    utils.hook('store', function (origin) {
+                        return function (newState, options) {
+                            var result = origin.call(null, newState, options);
+                            if (!mark) expect(store.name.inner.a).toBe(99);
+                            mark = true;
+                            return result
+                        }
+                    });
+                    tunk.create('name')((function () {
+                        function testModule() {
+                            this.state = { a: 99 };
+                        }
+                        testModule.prototype.action = tunk.createAction(function action(val) {
+                            return { b: val }
+                        });
+                        return testModule;
+                    })());
+                })
+                it('setState', function () {
+                    utils.modules.name.action(88);
+                    expect(store.name.inner.b).toBe(88);
+                });
+                it('getState', function () {
+                    expect(utils.modules.name.getState().inner.b).toBe(88);
+                });
+            });
         });
 
         describe('utils.hook', function () {
@@ -34,7 +75,7 @@ describe('tunk.use', function () {
                         return origin.call(null, module, opts);
                     }
                 });
-                tunk.create('name')(function testModule() {
+                tunk.create('name2')(function testModule() {
                     this.state = {};
                 });
                 expect(callHook).toBe(true);
@@ -43,7 +84,7 @@ describe('tunk.use', function () {
 
         describe('utils.store', function () {
             it('store.setState("state1", {a: 1})', function () {
-                utils.store.setState('state1', {a: 1});
+                utils.store.setState('state1', { a: 1 });
                 expect(utils.store.getState('state1').a).toBe(1);
             });
             it('store.setState("state2", null)', function () {
@@ -51,15 +92,22 @@ describe('tunk.use', function () {
                 expect(utils.store.getState('state2')).toBe(undefined);
             });
             it('store.setState("state1", {b: 1})', function () {
-                utils.store.setState('state1', {b: 1});
+                utils.store.setState('state1', { b: 1 });
                 expect(utils.store.getState('state1').a).toBe(1);
             });
         });
-        
+
         describe('utils.addMiddleware', function () {
             var num = 0;
             beforeEach(function () {
                 num = 0;
+                for (var x in utils.modules) utils.modules[x] = null;
+                for (var x in utils.configs) delete utils.configs[x];
+            });
+
+            afterEach(function () {
+                for (var x in utils.modules) utils.modules[x] = null;
+                for (var x in utils.configs) delete utils.configs[x];
             });
             it('addMiddleware(arr) next next next', function () {
                 utils.addMiddleware([function (dispatch, next, end, context, options) {
@@ -67,18 +115,18 @@ describe('tunk.use', function () {
                         num++;
                         return next(arguments);
                     }
-                },function (dispatch, next, end, context, options) {
+                }, function (dispatch, next, end, context, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
                     }
                 }]);
-                tunk.create('name')((function(){
+                tunk.create('name')((function () {
                     function testModule() {
                         this.state = {};
                     }
-                    testModule.prototype.action = tunk.createAction(function action(){
-                        return {a: 1}
+                    testModule.prototype.action = tunk.createAction(function action() {
+                        return { a: 1 }
                     });
                     return testModule;
                 })());
@@ -91,23 +139,23 @@ describe('tunk.use', function () {
             it('to end', function () {
                 utils.addMiddleware([function (dispatch, next, end, context, options) {
                     return function (r) {
-                        if(num > 6) {
+                        if (num > 6) {
                             num = 6;
                             return end(arguments);
-                        }else return next(arguments);
+                        } else return next(arguments);
                     }
-                },function (dispatch, next, end, context, options) {
+                }, function (dispatch, next, end, context, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
                     }
                 }]);
-                tunk.create('name')((function(){
+                tunk.create('name')((function () {
                     function testModule() {
                         this.state = {};
                     }
-                    testModule.prototype.action = tunk.createAction(function action(){
-                        return {a: 1}
+                    testModule.prototype.action = tunk.createAction(function action() {
+                        return { a: 1 }
                     });
                     return testModule;
                 })());
@@ -117,23 +165,28 @@ describe('tunk.use', function () {
                 tunk.dispatch('name.action');
                 expect(num).toBe(6);
             });
+
             it('error in middleware', function () {
                 utils.addMiddleware([function (dispatch, next, end, context, options) {
                     return function (r) {
-                        throw 'test error';
+                        if (r && r.a === 333) throw 'test errorrrrrrrrrrr';
                     }
                 }]);
-                tunk.create('name')((function(){
+                tunk.create('name111')((function () {
                     function testModule() {
-                        this.state = {};
+                        this.state = { a: 1 };
                     }
-                    testModule.prototype.action = tunk.createAction(function action(){
-                        return {a: 1}
+                    testModule.prototype.action = tunk.createAction(function action(val) {
+                        return { a: val }
                     });
                     return testModule;
                 })());
-                utils.modules.name.dispatch('name.action');
-                expect(num).toBe(6);
+                try {
+                    utils.modules.name111.dispatch('name111.action', 333);
+                } catch (e) {
+                    expect(true).toBe(e.indexOf('error in middleware') > -1);
+                }
+
             });
         });
     }]);

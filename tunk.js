@@ -9,14 +9,32 @@
 		middlewares = [],
 		configs = {};
 	
-	
+	function Store() {}
 	(function(){
 		var _store = {};
-		function Store() {}
 		Store.constructor = Store;
 		_defineHiddenProps(Store.prototype, {
-			getState : function(moduleName){
-				return _store[moduleName];
+			// 读取数据的方式应该由store提供，tunk只做转发
+			getState: function(path) {
+				if(typeof path === 'string') path = [path];
+				var state = _store[path[0]];
+				if (!path[1]) return state;
+				else {
+					console.log(path)
+					state = isNaN(path[1]) ? state[path[1]] : (state[path[1]] || state[parseInt(path[1])]);
+					if (!path[2] || typeof state !== 'object') return state;
+					else {
+						state = isNaN(path[2]) ? state[path[2]] : (state[path[2]] || state[parseInt(path[2])]);
+						if (!path[3] || typeof state !== 'object') return state;
+						else {
+							state = isNaN(path[3]) ? state[path[3]] : (state[path[3]] || state[parseInt(path[3])]);
+							if (!path[4] || typeof state !== 'object') return state;
+							else {
+								return isNaN(path[4]) ? state[path[4]] : (state[path[4]] || state[parseInt(path[4])]);
+							}
+						}
+					}
+				}
 			}, 
 			setState: function(moduleName, state){
 				if(_store[moduleName]) assign(_store[moduleName], state);
@@ -28,6 +46,7 @@
 	
 	function tunk(_store) {
 		if(_store) store = _store;
+		else store = new Store();
 		if(!store.setState || !store.getState) {
 			throw '[tunk]: store object should had two methods setState & getState';
 		}
@@ -79,6 +98,7 @@
 		} else if (typeof arguments[0] === 'object') {
 			opts = arguments[0];
 		}
+
 		if (arguments[1]) if (typeof arguments[1] === 'string') {
 			moduleName = arguments[1];
 		} else if (typeof arguments[1] === 'object') {
@@ -138,13 +158,14 @@
 
 			modules[moduleName] = hooks.initModule(module, opts);
 
-			_defineHiddenProps(modules[moduleName], { __stateFreezed__: true })
+			_defineHiddenProps(modules[moduleName], { __stateFreezed__: true });
 
-			var defaultState = modules[moduleName].state;
+			// 初次读取触发钩子
+			var defaultState = modules[moduleName].getState();
 
 			if (!defaultState || typeof defaultState !== 'object') {
-				throw '[tunk]:object type of the default state is required';
-			} else if (typeof defaultState === 'undefined') store.setState(moduleName, {});
+				throw '[tunk]:default state is required';
+			}
 
 			return modules[moduleName];
 
@@ -187,11 +208,11 @@
 				if(checkEndlessLoop++ > 1024) throw '[tunk]: Endless loop in middlewares.';
 				if (typeof args !== 'object' || isNaN(args.length)) throw '[tunk]:the param of next should be type of array or arguments';
 				if (index < middlewares.length) {
-					let result;
+					var result;
 					try{
 						result = apply(middlewares[index++](dispatch, next, end, context, options), args, module);
 					}catch(e) {
-						console.error('[tunk]', e, middlewares[index++], args, options, module);
+						throw '[tunk]:error in middleware, index:' + index;
 					}
 					return result;
 				} else {
@@ -215,7 +236,7 @@
 
 			function end(result) {
 				hooks.store(result[0], options);
-				return result;
+				return result[0];
 			}
 		},
 
@@ -225,25 +246,14 @@
 
 		// 支持5层
 		// 性能有待提升
-		getValueByPath: function (statePath, options) {
-			if (typeof statePath === 'string') return store.getState(statePath);
-			var state = store.getState(statePath[0]);
-			if (!statePath[1]) return state;
-			else {
-				state = isNaN(statePath[1]) ? state[statePath[1]] : (state[statePath[1]] || state[parseInt(statePath[1])]);
-				if (!statePath[2] || typeof state !== 'object') return state;
-				else {
-					state = isNaN(statePath[2]) ? state[statePath[2]] : (state[statePath[2]] || state[parseInt(statePath[2])]);
-					if (!statePath[3] || typeof state !== 'object') return state;
-					else {
-						state = isNaN(statePath[3]) ? state[statePath[3]] : (state[statePath[3]] || state[parseInt(statePath[3])]);
-						if (!statePath[4] || typeof state !== 'object') return state;
-						else {
-							return isNaN(statePath[4]) ? state[statePath[4]] : (state[statePath[4]] || state[parseInt(statePath[4])]);
-						}
-					}
-				}
-			}
+		getState: function (key, options) {
+			var path;
+			if(key && key.constructor === Array) path = key;
+			else if(typeof key === 'string') path = key.split('.');
+			else if(!key) path = [options.moduleName];
+			else throw '[tunk]:wrong argument of hooks.getState';
+			if(!modules[path[0]]) throw '[tunk]: unknown module name ' + path[0];
+			return store.getState(path);
 		}
 	};
 
@@ -308,15 +318,8 @@
 		}
 
 		assign(protos, mixins, protos, {
-			getState: function getState(path) {
-				if (!path) return hooks.getValueByPath(moduleName, this.options);
-				else {
-					var statePath = path.split('.');
-					if (!modules[statePath[0]]) throw '[tunk]:can\' not find the module ' + statePath[0];
-					if (statePath.length === 1)
-						return hooks.getValueByPath(statePath[0], modules[statePath[0]].options);
-					else return hooks.getValueByPath(statePath, modules[statePath[0]].options);
-				}
+			getState: function getState(key) {
+				return hooks.getState(key, opts);
 			},
 			dispatch: dispatch
 		});
@@ -339,8 +342,8 @@
 				},
 				set: function (state) {
 					if (!this.__stateFreezed__) {
-						if (store.getState(moduleName)) store.setState(moduleName, state);
-						else store.setState(moduleName, state);
+						// 初始存储触发store钩子
+						hooks.store(state, opts);
 					} else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
 			}
