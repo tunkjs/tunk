@@ -3,11 +3,11 @@ var tunk = require('../tunk.js')
 describe('tunk.config', function () {
     tunk.use([function (utils) {
         beforeEach(function () {
-            for (var x in utils.modules) utils.modules[x] = null;
+            utils.modules['name'] = null;
             for (var x in utils.configs) delete utils.configs[x];
         });
         afterEach(function () {
-            for (var x in utils.modules) utils.modules[x] = null;
+            utils.modules['name'] = null;
             for (var x in utils.configs) delete utils.configs[x];
         });
 

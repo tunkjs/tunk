@@ -6,10 +6,12 @@ describe('tunk.create', function () {
   tunk.use([function(utils){
 
     beforeEach(function() {
-      for(var x in utils.modules) utils.modules[x] = null;
+      utils.modules['name'] = null;
+      utils.modules['1'] = null;
     });
     afterEach(function() {
-      for(var x in utils.modules) utils.modules[x] = null;
+      utils.modules['name'] = null;
+      utils.modules['1'] = null;
     });
     
     it('@create', function () {

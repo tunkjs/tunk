@@ -1,7 +1,10 @@
 {
   "spec_dir": "test",
   "spec_files": [
-    "**/tunk.*.js"
+    "tunk.config.spec.js",
+    "tunk.create.spec.js",
+    "tunk.module.spec.js",
+    "tunk.use.spec.js"
   ],
   "helpers": [
     "setup.js"

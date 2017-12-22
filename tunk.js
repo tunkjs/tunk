@@ -16,11 +16,13 @@
 		_defineHiddenProps(Store.prototype, {
 			// 读取数据的方式应该由store提供，tunk只做转发
 			getState: function(path) {
-				if(typeof path === 'string') path = [path];
+				if(typeof path === 'string') path = path.split('.');
+				else if(!path || path.constructor !== Array) throw '[tunk]:wrong argument of getState';
+				if(!_store[path[0]]) throw '[tunk]: unknown module name ' + path[0];
+
 				var state = _store[path[0]];
 				if (!path[1]) return state;
 				else {
-					console.log(path)
 					state = isNaN(path[1]) ? state[path[1]] : (state[path[1]] || state[parseInt(path[1])]);
 					if (!path[2] || typeof state !== 'object') return state;
 					else {
@@ -109,7 +111,7 @@
 			moduleName = moduleName || opts && opts.name || target.__getName__ && target.__getName__();
 			if(!moduleName) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
 			opts = assign({moduleName: moduleName}, configs, opts);
-			hooks.createModule(target, opts);
+			return hooks.createModule(target, opts);
 		};
 	}
 
@@ -132,7 +134,7 @@
 		}
 		var constructor = module.constructor;
 		constructor.prototype = module;
-		hooks.createModule(constructor, assign({moduleName: moduleName}, configs, opts));
+		return hooks.createModule(constructor, assign({moduleName: moduleName}, configs, opts));
 	};
 
 	tunk.dispatch = function (name) {
@@ -155,7 +157,7 @@
 			if (modules[moduleName]) throw '[tunk]:the module ' + moduleName + ' already exists';
 
 			module = _constructModule(module, opts);
-
+			
 			modules[moduleName] = hooks.initModule(module, opts);
 
 			_defineHiddenProps(modules[moduleName], { __stateFreezed__: true });
@@ -209,11 +211,7 @@
 				if (typeof args !== 'object' || isNaN(args.length)) throw '[tunk]:the param of next should be type of array or arguments';
 				if (index < middlewares.length) {
 					var result;
-					try{
-						result = apply(middlewares[index++](dispatch, next, end, context, options), args, module);
-					}catch(e) {
-						throw '[tunk]:error in middleware, index:' + index;
-					}
+					result = apply(middlewares[index++](dispatch, next, end, context, options), args, module);
 					return result;
 				} else {
 					if (args[0] && typeof args[0] === 'object') {
@@ -235,24 +233,16 @@
 			}
 
 			function end(result) {
+				store.setState(options.moduleName, result[0]);
 				hooks.store(result[0], options);
 				return result[0];
 			}
 		},
 
-		store: function (newState, options) {
-			store.setState(options.moduleName, newState);
-		},
+		store: function (newState, options) {},
 
-		// 支持5层
-		// 性能有待提升
-		getState: function (key, options) {
-			var path;
-			if(key && key.constructor === Array) path = key;
-			else if(typeof key === 'string') path = key.split('.');
-			else if(!key) path = [options.moduleName];
-			else throw '[tunk]:wrong argument of hooks.getState';
-			if(!modules[path[0]]) throw '[tunk]: unknown module name ' + path[0];
+		getState: function (path, options) {
+			if(!path) path = options.moduleName;
 			return store.getState(path);
 		}
 	};
@@ -288,6 +278,9 @@
 			middlewares = middlewares.concat(middleware);
 		else if (typeof middleware === 'function') middlewares.push(middleware);
 		return tunk;
+	}
+	addMiddleware.__reset838383 = function(){
+		while(middlewares.length > 1){middlewares.pop()}
 	}
 
 	function mixin(obj) {
@@ -338,11 +331,12 @@
 		Object.defineProperties(protos, {
 			'state': {
 				get: function () {
-					return this.getState();
+					return hooks.getState(opts.moduleName, opts);
 				},
 				set: function (state) {
 					if (!this.__stateFreezed__) {
 						// 初始存储触发store钩子
+						store.setState(opts.moduleName, state);
 						hooks.store(state, opts);
 					} else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
 				}
