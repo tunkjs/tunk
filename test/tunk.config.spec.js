@@ -30,7 +30,7 @@ describe('tunk.config', function () {
                 function testModule() {
                     this.state = {};
                 }
-                testModule.prototype.action = tunk.createAction(function action(){});
+                testModule.prototype.action = tunk.Action(function action(){});
                 return testModule;
             })());
             expect(utils.modules.name.action.options.opt).toBe(1);

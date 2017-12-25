@@ -19,26 +19,26 @@ describe('tunk.create', function () {
         this.state = {};
       }
       testModule.__getName__ = function (){return 'name';}
-      tunk.create(testModule);
+      tunk.create()(testModule);
       expect(!!utils.modules.name).toBe(true);
     });
 
     it('@create("name")', function () {
-      tunk.create('name')(function testModule() {
+      tunk.create('name') (function testModule() {
         this.state = {};
       });
       expect(!!utils.modules.name).toBe(true);
     });
 
     it('@create(null, "name")', function () {
-      tunk.create('name')(function testModule() {
+      tunk.create('name') (function testModule() {
         this.state = {};
       });
       expect(!!utils.modules.name).toBe(true);
     });
 
     it('@create("1")', function () {
-      tunk.create('1')(function testModule() {
+      tunk.create('1') (function testModule() {
         this.state = {};
       });
       expect(!!utils.modules['1']).toBe(true);

@@ -24,14 +24,14 @@ describe('tunk.module ', function () {
         describe('async action', function () {
             let asyncModule;
             beforeEach(function (done) {
-                tunk.create('asyncModule')((function () {
+                tunk.create('asyncModule') ((function () {
                     function asyncModule() {
                         this.state = {
                             a: 0
                         };
                     }
                     asyncModule.constructor = asyncModule;
-                    asyncModule.prototype.myAsyncAction = tunk.createAction(function action() {
+                    asyncModule.prototype.myAsyncAction = tunk.Action(function action() {
                         return new Promise((resolve, reject) => {
                             setTimeout(() => {
                                 resolve(this.myAsyncAction2().then(() => {
@@ -40,7 +40,7 @@ describe('tunk.module ', function () {
                             }, 500);
                         });
                     });
-                    asyncModule.prototype.myAsyncAction2 = tunk.createAction(function action() {
+                    asyncModule.prototype.myAsyncAction2 = tunk.Action(function action() {
                         return new Promise(function (resolve, reject) {
                             setTimeout(() => {
                                 resolve({ a: 2 });
@@ -65,7 +65,7 @@ describe('tunk.module ', function () {
                     function asyncModule() {
                         this.state = { a: 0 }; }
                     asyncModule.constructor = asyncModule;
-                    asyncModule.prototype.myAsyncAction = tunk.createAction(function action() {
+                    asyncModule.prototype.myAsyncAction = tunk.Action(function action() {
                         return new Promise((resolve, reject) => {
                             setTimeout(() => {
                                 resolve(this.dispatch('asyncModule3.myAsyncAction').then(() => {
@@ -76,14 +76,14 @@ describe('tunk.module ', function () {
                     });
                     return asyncModule;
                 })());
-                tunk.create('asyncModule3')((function () {
+                tunk.create('asyncModule3') ((function () {
                     function asyncModule() {
                         this.state = {
                             a: 0
                         };
                     }
                     asyncModule.constructor = asyncModule;
-                    asyncModule.prototype.myAsyncAction = tunk.createAction(function action() {
+                    asyncModule.prototype.myAsyncAction = tunk.Action(function action() {
                         return new Promise((resolve, reject) => {
                             setTimeout(() => {
                                 resolve({a: 20});
@@ -107,7 +107,7 @@ describe('tunk.module ', function () {
         // describe('dispatch', function () {
         //     let asyncModule;
         //     beforeEach(function (done) {
-        //         asyncModule = tunk.create('asyncModule2')((function () {
+        //         asyncModule = tunk.create('asyncModule2', ((function () {
         //             function asyncModule() {
         //                 this.state = { a: 0 };
         //             }
@@ -133,7 +133,7 @@ describe('tunk.module ', function () {
         //     });
         // });
 
-        // const syncModule = tunk.create('syncModule')((function () {
+        // const syncModule = tunk.create('syncModule', ((function () {
         //     function syncModule() {
         //         this.state = { b: 0 };
         //     }
@@ -174,7 +174,7 @@ describe('tunk.module ', function () {
 
         //     return syncModule;
         // })());
-        // const asyncModule = tunk.create('asyncModule')((function () {
+        // const asyncModule = tunk.create('asyncModule', ((function () {
         //     let a = 0;
         //     function asyncModule() {
         //         this.state = { a: 0 };
