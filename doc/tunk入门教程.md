@@ -296,7 +296,7 @@ tunk.createModule('userAdmin', {
 
 [tunk组件开发]() 
 
-[关于tunk中间件的作用及如何开发业务中间件]()
+[tunk中间件的作用及如何开发业务中间件]()
 
 [开发自定义Store对象]()
 
