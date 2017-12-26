@@ -24,7 +24,7 @@ describe('tunk.module ', function () {
         describe('async action', function () {
             let asyncModule;
             beforeEach(function (done) {
-                tunk.create('asyncModule')((function () {
+                tunk.create('asyncModule') ((function () {
                     function asyncModule() {
                         this.state = {
                             a: 0
@@ -77,7 +77,7 @@ describe('tunk.module ', function () {
                     });
                     return asyncModule;
                 })());
-                tunk.create('asyncModule3')((function () {
+                tunk.create('asyncModule3') ((function () {
                     function asyncModule() {
                         this.state = {
                             a: 0
