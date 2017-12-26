@@ -145,14 +145,16 @@
 		base(){},
 	}, options);
 	 */
-	tunk.Create = function (moduleName, module, opts) {
+	tunk.Create = function (moduleName, protos, opts) {
 		if (typeof moduleName !== 'string') throw '[tunk]:the name of module is required when creating a module with tunk.createModule().';
-		if (!module || typeof module !== 'object' || !module.constructor || typeof module.constructor !== 'function') {
+		if (!protos || typeof protos !== 'object' || !protos.constructor || typeof protos.constructor !== 'function') 
 			throw '[tunk]:the second param as the prototype of the module class should be an object and had its constructor.';
-		}
-		var constructor = module.constructor;
-		constructor.prototype = module;
-		return hooks.compose(constructor, _assign({ moduleName: moduleName }, configs, opts));
+		if(!protos.constructor.prototype) throw '[tunk]:with Create, the constructor should be {constructor: function(){}} or {constructor: () => {}}, but not be { constructor(){} }';
+
+		var module = protos.constructor;
+		_assign(module.prototype, protos);
+		module = hooks.compose(module, _assign({ moduleName: moduleName }, configs, opts));
+		return hooks.initialize(module, module.prototype.options);
 	};
 
 	tunk.dispatch = function (name) {
