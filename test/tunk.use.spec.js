@@ -103,14 +103,14 @@ describe('tunk.use', function () {
                 num = 0;
                 utils.modules['name'] = null;
                 utils.modules['name111'] = null;
-                utils.addMiddleware.__reset838383();
+                utils.addMiddleware.__reset();
                 for (var x in utils.configs) delete utils.configs[x];
             });
 
             afterEach(function () {
                 utils.modules['name'] = null;
                 utils.modules['name111'] = null;
-                utils.addMiddleware.__reset838383();
+                utils.addMiddleware.__reset();
                 for (var x in utils.configs) delete utils.configs[x];
             });
             it('addMiddleware(arr) next next next', function () {

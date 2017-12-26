@@ -19,7 +19,7 @@ describe('tunk.module ', function () {
         //     done();
         // });
 
-        utils.addMiddleware.__reset838383();
+        utils.addMiddleware.__reset();
 
         describe('async action', function () {
             let asyncModule;

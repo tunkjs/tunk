@@ -29,13 +29,13 @@
 						state = isNaN(path[i]) ? state[path[i]] : (state[parseInt(path[i])] || state[path[i]]);
 					}
 				}
-				return clone(state);
+				return _clone(state);
 			},
 			setState: function (moduleName, state) {
 				var keys, keysResult, toUpdate;
 				if (this.state[moduleName]) {
 					if (!configs.strict) {
-						return _assign(this.state[moduleName], clone(state));
+						return _assign(this.state[moduleName], _clone(state));
 					}
 					// strict模式仅将已定义过的字段更新到store
 					keys = Object.keys(this.state[moduleName]);
@@ -46,19 +46,15 @@
 						if (keys.indexOf(keysResult[i]) > -1)
 							toUpdate[keysResult[i]] = state[keysResult[i]];
 
-					return _assign(this.state[moduleName], clone(toUpdate));
+					return _assign(this.state[moduleName], _clone(toUpdate));
 
-				} else if (state) return (this.state[moduleName] = _assign({}, clone(state)));
+				} else if (state) return (this.state[moduleName] = _assign({}, _clone(state)));
 			}
 		});
 
 		store = new Store();
 
-		function clone(obj) {
-			if (typeof obj === 'object') {
-				return configs.strict ? JSON.parse(JSON.stringify(obj)) : obj.constructor === Array ? obj.slice() : _assign({}, obj);
-			} else return obj;
-		}
+		
 	})();
 
 	function tunk(_modules) {
@@ -264,7 +260,7 @@
 				} else {
 					if (args.length === 1 && args[0] && typeof args[0] === 'object' && typeof args[0].then !== 'function') {
 						return endMiddleware(args[0]);
-					} else {
+					} else { 
 						index = 0;
 						return next(args);
 					}
@@ -273,8 +269,11 @@
 
 			function endMiddleware(result) {
 				hooks.setState(result, options);
+				
+				// 考虑ing这个数据是否有必要隔离引用
 				return result;
 			}
+
 		},
 
 		setState: function (newState, options) { 
@@ -318,8 +317,8 @@
 		else if (typeof middleware === 'function') middlewares.push(middleware);
 		return tunk;
 	}
-	addMiddleware.__reset838383 = function () {
-		while (middlewares.length > 2) { middlewares.pop() }
+	addMiddleware.__reset = function () {
+		while (middlewares.length > 2) middlewares.pop();
 	}
 
 	function mixin(obj) {
@@ -335,16 +334,10 @@
 		return apply(modules[moduleName][actionName], argsArray || [], modules[moduleName]);
 	}
 
-	function setStore(_store) {
-		if (!_store || !_store.setState || !_store.getState) {
-			throw '[tunk]: store object should had two methods setState & getState';
-		}
-		store = _store;
-	}
-
-	function _decorateAction(target, opts) {
-		target.options = opts;
-		return target;
+	function _clone(obj) {
+		if (typeof obj === 'object') {
+			return configs.strict ? JSON.parse(JSON.stringify(obj)) : obj.constructor === Array ? obj.slice() : _assign({}, obj);
+		} else return obj;
 	}
 
 	function _createAction(moduleName, actionName, originAction, opts) {
@@ -406,6 +399,7 @@
 			return dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1))
 		};
 	});
+	// promise middleware
 	addMiddleware(function (dispatch, next, options) {
 		return function (obj) {
 			if (obj && typeof obj === 'object' && obj.then) {
