@@ -93,7 +93,7 @@ class userAdmin {
 
 #### Action 
 模块类中使用`@action`修饰的方法，唯一可触发Store状态变化的方式。
-> Action通过return返回的数据和dispatch方法传入的数据都会先经过 [中间件]() 的处理，最后可能会触发State的变化
+> Action通过return返回的数据和dispatch方法传入的数据都会先经过 [中间件](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E4%B8%AD%E9%97%B4%E4%BB%B6%E7%9A%84%E4%BD%9C%E7%94%A8%E5%8F%8A%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E4%B8%9A%E5%8A%A1%E4%B8%AD%E9%97%B4%E4%BB%B6.md) 的处理，最后可能会触发State的变化
 > 
 > 支持异步Action，避免过多函数嵌套
 
@@ -150,7 +150,7 @@ class userAdmin {
 ### 四、tunk API
 
 #### tunk.use(plugins:Array)
-> 使用tunk组件，了解tunk组件开发，可戳这里 [tunk组件开发]() 
+> 使用tunk组件，了解tunk组件开发，可戳这里 [tunk组件开发](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E7%BB%84%E4%BB%B6%E5%BC%80%E5%8F%91.md) 
 
 ````javascript
 import tunk from "tunk";
@@ -282,41 +282,39 @@ tunk.createModule('userAdmin', {
 > 当前模块的action及非action方法都可以直接用`this.method([arg1, arg2...])`的方式调起
 
 #### mixin methods
-> 由组件提供的模块通用内置方法，如何添加mixin方法，请查看 [tunk组件开发]() 
+> 由组件提供的模块通用内置方法，如何添加mixin方法，请查看 [tunk组件开发](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E7%BB%84%E4%BB%B6%E5%BC%80%E5%8F%91.md) 
 
 
 
 ### 六、相关入门
 
-[tunk-vue实例入门]()
+[tunk-vue实例入门](https://github.com/tunkjs/tunk/blob/master/doc/tunk-vue%E5%AE%9E%E4%BE%8B%E5%85%A5%E9%97%A8.md)
 
-[tunk-react实例入门]()
+[tunk-react实例入门](https://github.com/tunkjs/tunk/blob/master/doc/tunk-react%E5%AE%9E%E4%BE%8B%E5%85%A5%E9%97%A8.md)
 
 ### 七、tunk深入详解
 
-[tunk组件开发]() 
+[tunk组件开发](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E7%BB%84%E4%BB%B6%E5%BC%80%E5%8F%91.md) 
 
-[tunk中间件的作用及如何开发业务中间件]()
+[tunk中间件的作用及如何开发业务中间件](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E4%B8%AD%E9%97%B4%E4%BB%B6%E7%9A%84%E4%BD%9C%E7%94%A8%E5%8F%8A%E5%A6%82%E4%BD%95%E5%BC%80%E5%8F%91%E4%B8%9A%E5%8A%A1%E4%B8%AD%E9%97%B4%E4%BB%B6.md)
 
-[开发自定义Store对象]()
+[开发自定义Store对象](https://github.com/tunkjs/tunk/blob/master/doc/%E5%BC%80%E5%8F%91%E8%87%AA%E5%AE%9A%E4%B9%89Store%E5%AF%B9%E8%B1%A1.md)
 
-[tunk性能优化]()
+[tunk性能优化](https://github.com/tunkjs/tunk/blob/master/doc/tunk%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96.md)
 
 ### 八、组件推荐
 
-[tunk-vue]()
+[tunk-vue](https://github.com/tunkjs/tunk-vue)
 
-[tunk-react]()
+[tunk-react](https://github.com/tunkjs/tunk-react)
 
-[tunk-request]()
+[tunk-request](https://github.com/tunkjs/tunk-request)
 
-[tunk-loader]()
+[tunk-loader](https://github.com/tunkjs/tunk-loader)
 
-[tunk-debug]()
+[tunk-debug](https://github.com/tunkjs/tunk-debug)
 
-[tunk-isolate]()
 
-[tunk-immultable]()
 
 
 
