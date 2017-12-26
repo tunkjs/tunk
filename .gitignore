@@ -2,3 +2,4 @@
 .sass-cache
 .idea
 .project
+node_modules
