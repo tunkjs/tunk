@@ -7,55 +7,70 @@
 		modules = {},
 		mixins = {},
 		middlewares = [],
-		configs = {};
-	
-	function Store() {}
-	(function(){
-		var _store = {};
+		configs = {
+			strict: true
+		};
+
+
+
+	(function () {
+		function Store() {
+			this.state = {};
+		}
 		Store.constructor = Store;
 		_defineHiddenProps(Store.prototype, {
-			// 读取数据的方式应该由store提供，tunk只做转发
-			getState: function(path) {
-				if(typeof path === 'string') path = path.split('.');
-				else if(!path || path.constructor !== Array) throw '[tunk]:wrong argument of getState';
-				if(!_store[path[0]]) throw '[tunk]: unknown module name ' + path[0];
-
-				var state = _store[path[0]];
-				if (!path[1]) return state;
-				else {
-					state = isNaN(path[1]) ? state[path[1]] : (state[path[1]] || state[parseInt(path[1])]);
-					if (!path[2] || typeof state !== 'object') return state;
-					else {
-						state = isNaN(path[2]) ? state[path[2]] : (state[path[2]] || state[parseInt(path[2])]);
-						if (!path[3] || typeof state !== 'object') return state;
-						else {
-							state = isNaN(path[3]) ? state[path[3]] : (state[path[3]] || state[parseInt(path[3])]);
-							if (!path[4] || typeof state !== 'object') return state;
-							else {
-								return isNaN(path[4]) ? state[path[4]] : (state[path[4]] || state[parseInt(path[4])]);
-							}
-						}
+			getState: function (path) {
+				if (typeof path === 'string') path = path.split('.');
+				else if (!path || path.constructor !== Array) throw '[tunk]:wrong argument of getState';
+				if (!this.state[path[0]]) throw '[tunk]: unknown module name ' + path[0];
+				var state = this.state[path[0]];
+				for(var i = 1, l = path.length; i< l; i++){
+					if(path[i] && typeof state === 'object') {
+						state = isNaN(path[i]) ? state[path[i]] : (state[parseInt(path[i])] || state[path[i]]);
 					}
 				}
-			}, 
-			setState: function(moduleName, state){
-				if(_store[moduleName]) assign(_store[moduleName], state);
-				else if(state) _store[moduleName] = assign({}, state);
+				return clone(state);
+			},
+			setState: function (moduleName, state) {
+				var keys, keysResult, toUpdate;
+				if (this.state[moduleName]) {
+					if (!configs.strict) {
+						return _assign(this.state[moduleName], clone(state));
+					}
+					// strict模式仅将已定义过的字段更新到store
+					keys = Object.keys(this.state[moduleName]);
+					keysResult = Object.keys(state);
+					toUpdate = {};
+
+					for (var i = 0; i < keysResult.length; i++)
+						if (keys.indexOf(keysResult[i]) > -1)
+							toUpdate[keysResult[i]] = state[keysResult[i]];
+
+					return _assign(this.state[moduleName], clone(toUpdate));
+
+				} else if (state) return (this.state[moduleName] = _assign({}, clone(state)));
 			}
 		});
+
 		store = new Store();
+
+		function clone(obj) {
+			if (typeof obj === 'object') {
+				return configs.strict ? JSON.parse(JSON.stringify(obj)) : obj.constructor === Array ? obj.slice() : _assign({}, obj);
+			} else return obj;
+		}
 	})();
-	
-	function tunk(_store) {
-		if(_store) store = _store;
-		else store = new Store();
-		if(!store.setState || !store.getState) {
-			throw '[tunk]: store object should had two methods setState & getState';
+
+	function tunk(_modules) {
+		if(_modules && _modules.length){
+			for(var i = 0; i < _modules.length; i++) {
+				modules[_modules[i].prototype.moduleName] = hooks.initialize(_modules[i]);
+			}
 		}
 	}
 
 	tunk.config = function (conf) {
-		assign(configs, conf);
+		_assign(configs, conf);
 		return tunk;
 	}
 
@@ -66,6 +81,7 @@
 					configs: configs,
 					modules: modules,
 					store: store,
+					setStore: setStore,
 					hooks: hooks,
 					hook: hook,
 					addMiddleware: addMiddleware,
@@ -82,17 +98,18 @@
 			opts[property].options = { isAction: true };
 			return opts[property];
 		} else return function (target, property, descriptor) {
-			target[property].options = assign({ isAction: true }, opts);
+			target[property].options = _assign({ isAction: true }, opts);
 			return target[property];
 		}
 	}
 
 	tunk.create = function () {
-		var moduleName, opts;
+		var moduleName, opts, module;
 
 		if (typeof arguments[0] === 'function') {
 			if (!arguments[0].__getName__) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
-			return hooks.createModule(arguments[0], assign({ moduleName: arguments[0].__getName__() }, configs));
+			module = hooks.compose(arguments[0], _assign({ moduleName: arguments[0].__getName__() }, configs));
+			return hooks.initialize(module, module.prototype.options);
 		}
 
 		if (arguments[0]) if (typeof arguments[0] === 'string') {
@@ -109,32 +126,33 @@
 
 		return function (target, property, descriptor) {
 			moduleName = moduleName || opts && opts.name || target.__getName__ && target.__getName__();
-			if(!moduleName) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
-			opts = assign({moduleName: moduleName}, configs, opts);
-			return hooks.createModule(target, opts);
+			if (!moduleName) throw '[tunk]:you should set a module name like "@create(\'ModuleName\')" or using webpack plugin tunk-loader.';
+			opts = _assign({ moduleName: moduleName }, configs, opts);
+			module = hooks.compose(arguments[0], opts);
+			return hooks.initialize(module, module.prototype.options);
 		};
 	}
 
-	tunk.createAction = function (target, opts) {
-		target.options = assign({ isAction: true }, opts);
+	tunk.Action = function (target, opts) {
+		target.options = _assign({ isAction: true }, opts);
 		return target;
 	};
-	
+
 	/**
-	tunk.createModule('Ajax', {
+	tunk.Create('Ajax', {
 		constructor:function Ajax(){},
-		get:tunk.creatAction(function(){}, {}),
+		get:tunk.Action(function(){}, {}),
 		base(){},
 	}, options);
 	 */
-	tunk.createModule = function (moduleName, module, opts) {
+	tunk.Create = function (moduleName, module, opts) {
 		if (typeof moduleName !== 'string') throw '[tunk]:the name of module is required when creating a module with tunk.createModule().';
-		if(!module || !module.constructor === Object || !module.constructor || !module.constructor === Object) {
+		if (!module || typeof module !== 'object' || !module.constructor || typeof module.constructor !== 'function') {
 			throw '[tunk]:the second param as the prototype of the module class should be an object and had its constructor.';
 		}
 		var constructor = module.constructor;
 		constructor.prototype = module;
-		return hooks.createModule(constructor, assign({moduleName: moduleName}, configs, opts));
+		return hooks.compose(constructor, _assign({ moduleName: moduleName }, configs, opts));
 	};
 
 	tunk.dispatch = function (name) {
@@ -147,18 +165,63 @@
 		throw 'wrong arguments';
 	};
 
+	
+
 	var hooks = {
 
-		createModule: function (module, opts) {
+		compose: function (module, opts) {
 
 			var moduleName = opts.moduleName;
 
 			if (!moduleName) throw '[tunk]:the name of module was required.';
+
+			var protos = module.prototype;
+
+			protos.moduleName = moduleName;
+	
+			var properties = _getProperties(module);
+	
+			for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
+				protos[properties[i]] = hooks.override(moduleName, protos, properties[i], _assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
+			}
+	
+			_assign(protos, mixins, protos, {
+				getState: function getState(key) {
+					return hooks.getState(key, opts);
+				},
+				dispatch: dispatch
+			});
+	
+			protos.options = opts;
+	
+			_defineHiddenProps(protos, protos);
+	
+			function dispatch() {
+				return hooks.runMiddlewares(this, arguments, dispatch, dispatch.options || protos.options);
+			}
+	
+			Object.defineProperties(protos, {
+				'state': {
+					get: function () {
+						return hooks.getState(opts.moduleName, opts);
+					},
+					set: function (state) {
+						if (!this.__stateFreezed__) {
+							hooks.setState(state, opts);
+						} else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
+					}
+				}
+			});
+			return module;
+		},
+
+		initialize: function (module, opts) {
+
+			var moduleName = opts.moduleName;
+
 			if (modules[moduleName]) throw '[tunk]:the module ' + moduleName + ' already exists';
 
-			module = _constructModule(module, opts);
-			
-			modules[moduleName] = hooks.initModule(module, opts);
+			modules[moduleName] = new module();
 
 			_defineHiddenProps(modules[moduleName], { __stateFreezed__: true });
 
@@ -179,52 +242,26 @@
 			} else return protos[protoName];
 		},
 
-		initModule: function (module, options) {
-			return new module();
-		},
-
 		callAction: function (originAction, args, module, options) {
 			var result = apply(originAction, args, module);
-			// 处理异步动作返回的promise
-			if (result && typeof result === 'object' && result.then) {
-				return result.then(function (data) {
-					if(!data) return data;
-					var prevOpts = module.dispatch.options;
-					module.dispatch.options = options;
-					var result = module.dispatch(data);
-					module.dispatch.options = prevOpts;
-					return result;
-				});
-			}
-			if (result) {
+			if (typeof result !== 'undefined') {
 				return module.dispatch(result);
 			}
 		},
 
-		runMiddlewares: function (module, args, context, dispatch, options) {
+		runMiddlewares: function (module, args, dispatch, options) {
 			var index = 0,
 				checkEndlessLoop = 0;
 			return next(args);
 			function next(args) {
-				if(!args[0]) return args[0];
-				if(checkEndlessLoop++ > 1024) throw '[tunk]: Endless loop in middlewares.';
+				if (!args[0]) return args[0];
+				if (checkEndlessLoop++ > 1024) throw '[tunk]: Endless loop in middlewares.';
 				if (typeof args !== 'object' || isNaN(args.length)) throw '[tunk]:the param of next should be type of array or arguments';
 				if (index < middlewares.length) {
-					var result;
-					result = apply(middlewares[index++](dispatch, next, end, context, options), args, module);
-					return result;
+					return apply(middlewares[index++](dispatch, next, options), args, module);
 				} else {
-					if (args[0] && typeof args[0] === 'object') {
-						if (typeof args[0].then !== 'function') {
-							return end(args);
-						} else {
-							return args[0].then(function (result) {
-								// 值变更应重走中间件 promise --> result
-								if(!result) return result;
-								index = 0;
-								return next([result]);
-							});
-						}
+					if (args.length === 1 && args[0] && typeof args[0] === 'object' && typeof args[0].then !== 'function') {
+						return endMiddleware(args[0]);
 					} else {
 						index = 0;
 						return next(args);
@@ -232,17 +269,18 @@
 				}
 			}
 
-			function end(result) {
-				store.setState(options.moduleName, result[0]);
-				hooks.store(result[0], options);
-				return result[0];
+			function endMiddleware(result) {
+				hooks.setState(result, options);
+				return result;
 			}
 		},
 
-		store: function (newState, options) {},
+		setState: function (newState, options) { 
+			store.setState(options.moduleName, newState);			
+		},
 
 		getState: function (path, options) {
-			if(!path) path = options.moduleName;
+			if (!path) path = options.moduleName;
 			return store.getState(path);
 		}
 	};
@@ -266,9 +304,8 @@
 
 	/**
 	 * 
-	 * utils.addMiddleware([function (dispatch, next, end, context, options) {
+	 * utils.addMiddleware([function (dispatch, next, options) {
 			return function () {
-				if(ok) return end(arguments);
 				return next(arguments);
 			}
 		}]);
@@ -279,12 +316,12 @@
 		else if (typeof middleware === 'function') middlewares.push(middleware);
 		return tunk;
 	}
-	addMiddleware.__reset838383 = function(){
-		while(middlewares.length > 1){middlewares.pop()}
+	addMiddleware.__reset838383 = function () {
+		while (middlewares.length > 2) { middlewares.pop() }
 	}
 
 	function mixin(obj) {
-		assign(mixins, obj);
+		_assign(mixins, obj);
 		return tunk;
 	}
 
@@ -296,57 +333,12 @@
 		return apply(modules[moduleName][actionName], argsArray || [], modules[moduleName]);
 	}
 
-
-
-	function _constructModule(module, opts) {
-
-		var moduleName = opts.moduleName;
-
-		var protos = module.prototype;
-
-		var properties = _getProperties(module);
-
-		for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
-			protos[properties[i]] = hooks.override(moduleName, protos, properties[i], assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
+	function setStore(_store) {
+		if (!_store || !_store.setState || !_store.getState) {
+			throw '[tunk]: store object should had two methods setState & getState';
 		}
-
-		assign(protos, mixins, protos, {
-			getState: function getState(key) {
-				return hooks.getState(key, opts);
-			},
-			dispatch: dispatch
-		});
-
-		protos.options = opts;
-
-		_defineHiddenProps(protos, protos);
-
-		function dispatch() {
-			return hooks.runMiddlewares(this, arguments, {
-				modules: modules,
-				store: store,
-			}, dispatch, dispatch.options || protos.options);
-		}
-
-		Object.defineProperties(protos, {
-			'state': {
-				get: function () {
-					return hooks.getState(opts.moduleName, opts);
-				},
-				set: function (state) {
-					if (!this.__stateFreezed__) {
-						// 初始存储触发store钩子
-						store.setState(opts.moduleName, state);
-						hooks.store(state, opts);
-					} else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
-				}
-			}
-		});
-		return module;
+		store = _store;
 	}
-
-
-
 
 	function _decorateAction(target, opts) {
 		target.options = opts;
@@ -391,10 +383,10 @@
 		return protos;
 	}
 
-	function assign(){
+	function _assign() {
 		var args = arguments;
-		for(var i = 0, l = args.length; i < l; i++) {
-			if(args[i + 1] && typeof args[i + 1] === 'object') for( var x in args[i + 1]){
+		for (var i = 0, l = args.length; i < l; i++) {
+			if (args[i + 1] && typeof args[i + 1] === 'object') for (var x in args[i + 1]) {
 				args[0][x] = args[i + 1][x];
 			}
 		}
@@ -402,14 +394,29 @@
 	}
 
 	// action middleware, the first middleware
-	addMiddleware(function (dispatch, next, end, context, options) {
+	addMiddleware(function (dispatch, next, options) {
 		return function (name) {
 			if (typeof name !== 'string') {
 				return next(arguments);
-			}
+			} 
 			if (name.indexOf('.') === -1) name = [options.moduleName, name];
 			else name = name.split('.');
 			return dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1))
+		};
+	});
+	addMiddleware(function (dispatch, next, options) {
+		return function (obj) {
+			if (obj && typeof obj === 'object' && obj.then) {
+				return obj.then(function (data) {
+					if (typeof data !== 'undefined'){
+						var prevOpts = dispatch.options;
+						dispatch.options = options;
+						var result = dispatch(data);
+						dispatch.options = prevOpts;
+						return result;
+					}
+				});
+			}else return next(arguments);
 		};
 	});
 

@@ -58,7 +58,7 @@ describe('tunk.use', function () {
         //                     return result
         //                 }
         //             });
-        //             tunk.create('name')((function () {
+        //             tunk.create('name', ((function () {
         //                 function testModule() {
         //                     this.state = { a: 99 };
         //                 }
@@ -81,15 +81,15 @@ describe('tunk.use', function () {
         // });
 
         describe('utils.hook', function () {
-            it('hook(createModule)', function () {
+            it('hook(compose)', function () {
                 var callHook = false;
-                utils.hook('createModule', function (origin) {
+                utils.hook('compose', function (origin) {
                     return function (module, opts) {
                         callHook = true;
                         return origin.call(null, module, opts);
                     }
                 });
-                tunk.create('name2')(function testModule() {
+                tunk.create('name2') (function testModule() {
                     this.state = {};
                 });
                 expect(callHook).toBe(true);
@@ -125,11 +125,11 @@ describe('tunk.use', function () {
                         return next(arguments);
                     }
                 }]);
-                tunk.create('name')((function () {
+                tunk.create('name') ((function () {
                     function testModule() {
                         this.state = {};
                     }
-                    testModule.prototype.action = tunk.createAction(function action() {
+                    testModule.prototype.action = tunk.Action(function action() {
                         return { a: 1 }
                     });
                     return testModule;
@@ -154,11 +154,11 @@ describe('tunk.use', function () {
                         return next(arguments);
                     }
                 }]);
-                tunk.create('name')((function () {
+                tunk.create('name') ((function () {
                     function testModule() {
                         this.state = {};
                     }
-                    testModule.prototype.action = tunk.createAction(function action() {
+                    testModule.prototype.action = tunk.Action(function action() {
                         return { a: 1 }
                     });
                     return testModule;
@@ -176,11 +176,11 @@ describe('tunk.use', function () {
                         if (r && r.a === 333) throw 'test errorrrrrrrrrrr';
                     }
                 }]);
-                tunk.create('name111')((function () {
+                tunk.create('name111') ((function () {
                     function testModule() {
                         this.state = { a: 1 };
                     }
-                    testModule.prototype.action = tunk.createAction(function action(val) {
+                    testModule.prototype.action = tunk.Action(function action(val) {
                         return { a: val }
                     });
                     return testModule;
