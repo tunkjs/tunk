@@ -11,8 +11,6 @@
 			strict: true
 		};
 
-
-
 	function Store() {
 		this.state = {};
 	}

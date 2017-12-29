@@ -46,7 +46,7 @@ class userAdmin {
 
 ````
 
-状态管理模块与视图组件是并非一对一的关系，所有状态管理模块共同组成了一个数据服务层，视图组件可以订阅任意模块的状态数据。
+状态管理模块与视图组件是并非一对一的关系，所有状态管理模块共同组成了一个数据服务层，视图组件可以订阅任意模块的状态数据。下面以配合vue作实例说明
 
 
 ````html
@@ -88,6 +88,31 @@ export default {
 }
 </script>
 ````
+
+
+````javascript
+
+// 应用入口文件tunk模块的初始化
+
+import Vue from 'vue';
+import tunk from "tunk";
+import tunkVue from "tunk-vue";
+
+// tunk使用tunk-vue组件
+tunk.use([tunkVue]);
+Vue.use(tunk);
+
+// 引入状态管理模块即可创建状态管理模块
+//import './userAdmin';
+// 也可批量引入（通常我们都把模块js放到统一目录下，如：modules）
+var modules = require.context('./modules', true, /\.js$/);
+modules.keys().forEach((item) => {
+  modules(item);
+});
+
+````
+
+
 
 #### 一些特点
 1、tunk是一个面向对象的状态管理框架，你需要面向业务数据逻辑对象来设计状态管理模块类。
