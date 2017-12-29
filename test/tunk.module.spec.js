@@ -37,14 +37,14 @@ describe('tunk.module ', function () {
                                 resolve(this.myAsyncAction2().then(() => {
                                     setTimeout(() => { done() });
                                 }));
-                            }, 500);
+                            }, 100);
                         });
                     });
                     asyncModule.prototype.myAsyncAction2 = tunk.Action(function action() {
                         return new Promise(function (resolve, reject) {
                             setTimeout(() => {
                                 resolve({ a: 2 });
-                            }, 1000);
+                            }, 200);
                         });
                     });
                     return asyncModule;
@@ -72,7 +72,7 @@ describe('tunk.module ', function () {
                                 resolve(this.dispatch('asyncModule3.myAsyncAction').then(() => {
                                     setTimeout(() => { done() });
                                 }));
-                            }, 500);
+                            }, 100);
                         });
                     });
                     return asyncModule;
@@ -88,7 +88,7 @@ describe('tunk.module ', function () {
                         return new Promise((resolve, reject) => {
                             setTimeout(() => {
                                 resolve({ a: 20 });
-                            }, 500);
+                            }, 100);
                         });
                     });
                     return asyncModule;

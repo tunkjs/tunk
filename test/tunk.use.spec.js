@@ -114,12 +114,12 @@ describe('tunk.use', function () {
                 for (var x in utils.configs) delete utils.configs[x];
             });
             it('addMiddleware(arr) next next next', function () {
-                utils.addMiddleware([function (dispatch, next, end, context, options) {
+                utils.addMiddleware([function (dispatch, next, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
                     }
-                }, function (dispatch, next, end, context, options) {
+                }, function (dispatch, next, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
@@ -140,38 +140,10 @@ describe('tunk.use', function () {
                 tunk.dispatch('name.action');
                 expect(num).toBe(8);
             });
-            it('to end', function () {
-                utils.addMiddleware([function (dispatch, next, end, context, options) {
-                    return function (r) {
-                        if (num > 6) {
-                            num = 6;
-                            return end(arguments);
-                        } else return next(arguments);
-                    }
-                }, function (dispatch, next, end, context, options) {
-                    return function (r) {
-                        num++;
-                        return next(arguments);
-                    }
-                }]);
-                tunk.create('name') ((function () {
-                    function testModule() {
-                        this.state = {};
-                    }
-                    testModule.prototype.action = tunk.Action(function action() {
-                        return { a: 1 }
-                    });
-                    return testModule;
-                })());
-                utils.modules.name.dispatch('name.action');
-                utils.modules.name.action();
-                utils.dispatchAction('name', 'action');
-                tunk.dispatch('name.action');
-                expect(num).toBe(4);
-            });
+            
 
             it('error in middleware', function () {
-                utils.addMiddleware([function (dispatch, next, end, context, options) {
+                utils.addMiddleware([function (dispatch, next, options) {
                     return function (r) {
                         if (r && r.a === 333) throw 'test errorrrrrrrrrrr';
                     }

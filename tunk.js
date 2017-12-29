@@ -13,56 +13,44 @@
 
 
 
-	(function () {
-		function Store() {
-			this.state = {};
-		}
-		Store.constructor = Store;
-		_defineHiddenProps(Store.prototype, {
-			getState: function (path) {
-				if (typeof path === 'string') path = path.split('.');
-				else if (!path || path.constructor !== Array) throw '[tunk]:wrong argument of getState';
-				if (!this.state[path[0]]) throw '[tunk]: unknown module name ' + path[0];
-				var state = this.state[path[0]];
-				for(var i = 1, l = path.length; i< l; i++){
-					if(path[i] && typeof state === 'object') {
-						state = isNaN(path[i]) ? state[path[i]] : (state[parseInt(path[i])] || state[path[i]]);
-					}
+	function Store() {
+		this.state = {};
+	}
+	Store.constructor = Store;
+	_defineHiddenProps(Store.prototype, {
+		getState: function (path) {
+			if (typeof path === 'string') path = path.split('.');
+			else if (!path || path.constructor !== Array) throw '[tunk]:wrong argument of getState';
+			if (!this.state[path[0]]) throw '[tunk]: unknown module name ' + path[0];
+			var state = this.state[path[0]];
+			for (var i = 1, l = path.length; i < l; i++) {
+				if (path[i] && typeof state === 'object') {
+					state = isNaN(path[i]) ? state[path[i]] : (state[parseInt(path[i])] || state[path[i]]);
 				}
-				return _clone(state);
-			},
-			setState: function (moduleName, state) {
-				var keys, keysResult, toUpdate;
-				if (this.state[moduleName]) {
-					if (!configs.strict) {
-						return _assign(this.state[moduleName], _clone(state));
-					}
-					// strict模式仅将已定义过的字段更新到store
-					keys = Object.keys(this.state[moduleName]);
-					keysResult = Object.keys(state);
-					toUpdate = {};
-
-					for (var i = 0; i < keysResult.length; i++)
-						if (keys.indexOf(keysResult[i]) > -1)
-							toUpdate[keysResult[i]] = state[keysResult[i]];
-
-					return _assign(this.state[moduleName], _clone(toUpdate));
-
-				} else if (state) return (this.state[moduleName] = _assign({}, _clone(state)));
 			}
-		});
+			return _clone(state);
+		},
+		setState: function (moduleName, state) {
+			var keys, keysResult, toUpdate;
+			if (this.state[moduleName]) {
+				keys = Object.keys(this.state[moduleName]);
+				keysResult = Object.keys(state);
+				toUpdate = {};
 
-		store = new Store();
+				for (var i = 0; i < keysResult.length; i++)
+					if (keys.indexOf(keysResult[i]) > -1)
+						toUpdate[keysResult[i]] = state[keysResult[i]];
 
-		
-	})();
+				return _assign(this.state[moduleName], _clone(toUpdate));
 
-	function tunk(_modules) {
-		if(_modules && _modules.length){
-			for(var i = 0; i < _modules.length; i++) {
-				modules[_modules[i].prototype.moduleName] = hooks.initialize(_modules[i]);
-			}
+			} else if (state) return (this.state[moduleName] = _assign({}, _clone(state)));
 		}
+	});
+
+
+	function tunk(_store) {
+		if(!_store.setState || !_store.getState) throw '[tunk]:the store should had method setState & getState';
+		store = _store;
 	}
 
 	tunk.config = function (conf) {
@@ -77,7 +65,6 @@
 					configs: configs,
 					modules: modules,
 					store: store,
-					setStore: setStore,
 					hooks: hooks,
 					hook: hook,
 					addMiddleware: addMiddleware,
@@ -118,7 +105,7 @@
 			moduleName = arguments[1];
 		} else if (typeof arguments[1] === 'object') {
 			opts = arguments[1];
-		}
+		} 
 
 		return function (target, property, descriptor) {
 			moduleName = moduleName || opts && opts.name || target.__getName__ && target.__getName__();
@@ -143,9 +130,9 @@
 	 */
 	tunk.Create = function (moduleName, protos, opts) {
 		if (typeof moduleName !== 'string') throw '[tunk]:the name of module is required when creating a module with tunk.createModule().';
-		if (!protos || typeof protos !== 'object' || !protos.constructor || typeof protos.constructor !== 'function') 
+		if (!protos || typeof protos !== 'object' || !protos.constructor || typeof protos.constructor !== 'function')
 			throw '[tunk]:the second param as the prototype of the module class should be an object and had its constructor.';
-		if(!protos.constructor.prototype) throw '[tunk]:with Create, the constructor should be {constructor: function(){}} or {constructor: () => {}}, but not be { constructor(){} }';
+		if (!protos.constructor.prototype) throw '[tunk]:with Create, the constructor should be {constructor: function(){}} or {constructor: () => {}}, but not be { constructor(){} }';
 
 		var module = protos.constructor;
 		_assign(module.prototype, protos);
@@ -163,7 +150,7 @@
 		throw 'wrong arguments';
 	};
 
-	
+
 
 	var hooks = {
 
@@ -176,28 +163,28 @@
 			var protos = module.prototype;
 
 			protos.moduleName = moduleName;
-	
+
 			var properties = _getProperties(module);
-	
+
 			for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
 				protos[properties[i]] = hooks.override(moduleName, protos, properties[i], _assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
 			}
-	
+
 			_assign(protos, mixins, protos, {
 				getState: function getState(key) {
 					return hooks.getState(key, opts);
 				},
 				dispatch: dispatch
 			});
-	
+
 			protos.options = opts;
-	
+
 			_defineHiddenProps(protos, protos);
-	
+
 			function dispatch() {
 				return hooks.runMiddlewares(this, arguments, dispatch, dispatch.options || protos.options);
 			}
-	
+
 			Object.defineProperties(protos, {
 				'state': {
 					get: function () {
@@ -210,6 +197,7 @@
 					}
 				}
 			});
+
 			return module;
 		},
 
@@ -218,6 +206,8 @@
 			var moduleName = opts.moduleName;
 
 			if (modules[moduleName]) throw '[tunk]:the module ' + moduleName + ' already exists';
+
+			if(!store) store = new Store();
 
 			modules[moduleName] = new module();
 
@@ -229,9 +219,7 @@
 			if (!defaultState || typeof defaultState !== 'object') {
 				throw '[tunk]:default state is required';
 			}
-
 			return modules[moduleName];
-
 		},
 
 		override: function (moduleName, protos, protoName, options) {
@@ -258,26 +246,14 @@
 				if (index < middlewares.length) {
 					return apply(middlewares[index++](dispatch, next, options), args, module);
 				} else {
-					if (args.length === 1 && args[0] && typeof args[0] === 'object' && typeof args[0].then !== 'function') {
-						return endMiddleware(args[0]);
-					} else { 
-						index = 0;
-						return next(args);
-					}
+					index = 0;
+					return next(args);
 				}
 			}
-
-			function endMiddleware(result) {
-				hooks.setState(result, options);
-				
-				// 考虑ing这个数据是否有必要隔离引用
-				return result;
-			}
-
 		},
 
-		setState: function (newState, options) { 
-			store.setState(options.moduleName, newState);			
+		setState: function (newState, options) {
+			store.setState(options.moduleName, newState);
 		},
 
 		getState: function (path, options) {
@@ -304,21 +280,25 @@
 	}
 
 	/**
-	 * 
 	 * utils.addMiddleware([function (dispatch, next, options) {
 			return function () {
 				return next(arguments);
 			}
 		}]);
-	 */
+	*/
 	function addMiddleware(middleware) {
+		// 使数据存储组件永远在其他组件后面
+		var storeMiddleware = middlewares.pop();
 		if (typeof middleware === 'object' && middleware.constructor === Array)
 			middlewares = middlewares.concat(middleware);
 		else if (typeof middleware === 'function') middlewares.push(middleware);
+		middlewares.push(storeMiddleware);
 		return tunk;
 	}
 	addMiddleware.__reset = function () {
+		var storeMiddleware = middlewares.pop();		
 		while (middlewares.length > 2) middlewares.pop();
+		middlewares.push(storeMiddleware);		
 	}
 
 	function mixin(obj) {
@@ -389,22 +369,23 @@
 	}
 
 	// action middleware, the first middleware
-	addMiddleware(function (dispatch, next, options) {
+	middlewares.push(function (dispatch, next, options) {
 		return function (name) {
 			if (typeof name !== 'string') {
 				return next(arguments);
-			} 
+			}
 			if (name.indexOf('.') === -1) name = [options.moduleName, name];
 			else name = name.split('.');
 			return dispatchAction(name[0], name[1], Array.prototype.slice.call(arguments, 1))
 		};
 	});
+
 	// promise middleware
-	addMiddleware(function (dispatch, next, options) {
+	middlewares.push(function (dispatch, next, options) {
 		return function (obj) {
-			if (obj && typeof obj === 'object' && obj.then) {
+			if (obj && typeof obj === 'object' && obj.then && typeof obj.then === 'function') {
 				return obj.then(function (data) {
-					if (typeof data !== 'undefined'){
+					if (typeof data !== 'undefined') {
 						var prevOpts = dispatch.options;
 						dispatch.options = options;
 						var result = dispatch(data);
@@ -412,8 +393,21 @@
 						return result;
 					}
 				});
-			}else return next(arguments);
+			} else return next(arguments);
 		};
+	});
+
+	// store middleware
+	middlewares.push(function (dispatch, next, options) {
+		return function (result) {
+			if (arguments.length === 1 && result && typeof result === 'object' && typeof result.then !== 'function') {
+				hooks.setState(result, options);
+				// 考虑ing这个数据是否有必要隔离引用
+				return result;
+			} else {
+				return next(arguments);
+			}
+		}
 	});
 
 

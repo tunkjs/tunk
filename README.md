@@ -1,34 +1,44 @@
-## tunk
-实现交互逻辑和数据处理逻辑优雅分离与结合的一个精简高效的应用状态管理框架。
+# tunk
+实现了交互逻辑和数据处理逻辑轻松解耦的应用状态管理框架。
 
-tunk采用集中式存储、分散式管理来维护应用状态。需要你面向业务数据逻辑对象来设计状态管理模块，并且仅能由所属模块定义的Action去更新所属模块定义的状态，而模块实际不存储状态数据，这样的机制利于代码职责的划分及控制不可预知的状态变化。
+你需要面向业务数据逻辑对象来设计状态管理模块，并且仅能由所属模块定义的Action去更新所属模块定义的状态，而模块实际不存储状态数据，这样的机制利于代码职责的划分及控制不可预知的状态变化。
 
-### 一、一些特点
-1、tunk是一个面向对象的状态管理框架，你需要面向业务数据逻辑对象来设计状态管理模块类。
+对于视图组件来说，tunk提供的是一个数据服务，组件可以轻松订阅需要的数据，也可以主动获取Action返回的处理结果。
+
+
+````
+npm install tunk
+````
+
+### 一、先看个小实例
 
 ````javascript
-// userAdmin模块类
+// 一个用户管理模块
 import {create, action} from 'tunk'
+// 生成模块类实例
 @create
 class userAdmin {
 	constructor(){
+		// 定义存储到store相关节点的状态字段 list
 		this.state = {
-			list:[],
-			totalCount: 0
+			list:[]
 		}
 	}
 	
 	@action
 	fetchList(param){
 		const res = this.request ...
+		// 将list新状态更新到store
+		// totalCount由于未在constructor中被定义为状态字段
+		// 因此totalCount不会被保存到store
 		return {list: res.list, totalCount: res.total_count}
 	}
 	@action 
 	addUser(){
 		...
 	}
-	@action
-	deleteUser(){
+
+	someFunc(){
 		...
 	}
 	...
@@ -36,30 +46,74 @@ class userAdmin {
 
 ````
 
-2、一个模块对应着store状态树的一个节点，一个store状态节点仅能被对应的一个模块更新，通过发起Action的执行，去更新store对象中由该模块所定义的状态
+状态管理模块与视图组件是并非一对一的关系，所有状态管理模块共同组成了一个数据服务层，视图组件可以订阅任意模块的状态数据。
 
-> 如 `@create`执行之后，store对象即生成相应的userAdmin节点，该节点的初始化数据来自该类的constructor内初始化的状态数据 `this.state`
+
+````html
+// vue视图组件（tunk-vue）
+<template>
+  <ul>
+  	<li v-for="item in list"></li>
+  </ul>
+  ...
+</template>
+<script>
+export default {
+	// 状态订阅配置
+	state: {
+		// list 是userAdmin定义的状态字段
+		// 组件被初始化后this.list将被注入当前 userAdmin.list 的状态
+		list: 'userAdmin.list'
+	},
+	
+	data() {
+		return {
+			count: 0
+		};
+	},
+	
+	created(){
+		this.loadUserList();
+	}
+	
+	methods: {
+		async loadUserList() {
+			const result = await this.dispatch('userAdmin.fetchList');
+			// userAdmin模块的action：fetchList ，返回了{list, totalCount};
+			// 虽然totalCount没被保存到store
+			// totalCount仍然可以在 this.dispatch('userAdmin.fetchList') 返回的结果中使用
+			this.count = result.totalCount;
+		}
+	}
+}
+</script>
+````
+
+#### 一些特点
+1、tunk是一个面向对象的状态管理框架，你需要面向业务数据逻辑对象来设计状态管理模块类。
+
+2、一个模块对应着store状态树的一个节点，一个store状态节点仅能被对应的模块更新
+
+> `@create`执行之后，模块类被重构及生成模块实例，store对象则生成相应的userAdmin节点，该节点的初始化数据来自该类的constructor内初始化的状态数据 `this.state`
 > 
-> 节点 userAdmin 的数据仅能被模块 userAdmin 的Action去更新
 > 
 > > ````javascript
 > > store tree: {
 > >	 	userAdmin: {
-> >	 		list: [],
-> >	 		totalCount: 0
+> >	 		list: []
 > >	 	}
 > > }
 > > ````
 > 
-> `@action`定义该类的方法为一个Action，这些Action所return的数据或用`this.dispatch`分发的数据，都会先跑tunk定义的中间件，最后更新到store对象的userAdmin节点
+> `@action`定义该类的方法为一个Action，这些Action所return的数据或用`this.dispatch`发送的数据，都会先跑tunk定义的中间件，最后可能会更新到store对象的userAdmin节点
 > 
-> `this.state` 仅允许在`constructor`内被同步初始化赋值，该类被实例化之后，`this.state`将不再存储数据，所读取的数据都会来自store对象。
+> `this.state` 仅允许在`constructor`内被同步初始化赋值，该类被实例化之后，`this.state` 二次赋值将报错 
 
-3、action只能更新在constructor内定义的状态字段，另外，调起action的时候可以获取action返回的所有内容，包括未定义字段的内容
+3、action只能更新在constructor内定义的状态字段，视图组件可以轻松订阅不同模块的状态数据，也可以通过调起action的方法获得其返回的所有数据。
 
-> 你可根据数据复用情况适当定义状态数据，如果一个action的处理结果不会被不同模块或视图组件重复利用，我们并不推荐你对这部分的数据定义为状态数据
+> 你可根据数据复用情况适当定义状态数据，如果一个action的处理结果不会被不同模块或视图组件或同一组件模块不同时间点重复利用，我们并不推荐你对这部分的数据定义为状态数据
 > 
-> 由于可获得action返回的所有内容，避免为了仅仅使用一次的数据做繁琐的状态数据定义与绑定操作
+> 由于可获得action返回的所有内容，可以避免为了仅仅使用一次的数据做繁琐的状态数据定义与绑定操作
 > 
 > 推荐你将所有的数据处理逻辑都放在在模块内，这样可以减轻视图层的复杂度，视图层仅负责内容展示及交互的逻辑处理
 > 
@@ -67,10 +121,10 @@ class userAdmin {
 ### 二、一些基本概念
 
 #### Store 
-存储状态树数据，提供tunk内部调用的读取和更新状态树数据的方法。
+存储状态树数据，提供tunk内部读取和更新状态树数据的方法。
 > tunk默认使用的是内置的Store对象，你也可以使用自定义的Store对象来改变数据存储、读取方式
 > 
-> 对常规业务开发是透明的，仅在扩展组件的开发中暴露store接口
+> 对常规业务开发是透明的，仅在扩展组件的开发中暴露store相关接口
 
 [开发自定义Store对象]()
 
