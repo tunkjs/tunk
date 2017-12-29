@@ -226,6 +226,10 @@ modules.keys().forEach((item) => {
 > * 触发 hooks.store 钩子
 > * 与视图框架绑定的组件(tunk-react/tunk-vue)，利用hooks.store钩子去触发新状态快照注入到视图组件中
 
+<p style="text-align:center;">
+<img src="https://github.com/tunkjs/tunk/blob/master/doc/tunk-flow.png?raw=true" alt="tunk flow">
+</p>
+
 ### 四、tunk API
 
 #### tunk.use(plugins:Array)
