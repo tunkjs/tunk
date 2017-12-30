@@ -1,3 +1,8 @@
+
+<div style="text-align:center; margin-bottom:50px;">
+<img style="width: 400px;" src="https://github.com/tunkjs/gitbook-tunkjs/blob/master/img/icon.png?raw=true" alt="tunk logo">
+</div>
+
 # tunk
 实现了交互逻辑和数据处理逻辑轻松解耦的应用状态管理框架。
 
@@ -5,17 +10,20 @@
 
 对于视图组件来说，tunk提供的是一个数据服务，组件可以轻松订阅需要的数据，也可以主动获取Action返回的处理结果。
 
+#### 安装
 
 ````
 npm install tunk
 ````
 
-### 一、先看个小实例
+### 一、实例
+
+1、tunk模块的创建
 
 ````javascript
 // 一个用户管理模块
 import {create, action} from 'tunk'
-// 生成模块类实例
+// 创建模块类实例
 @create
 class userAdmin {
 	constructor(){
@@ -24,7 +32,6 @@ class userAdmin {
 			list:[]
 		}
 	}
-	
 	@action
 	fetchList(param){
 		const res = this.request ...
@@ -37,7 +44,7 @@ class userAdmin {
 	addUser(){
 		...
 	}
-
+	// 非action方法
 	someFunc(){
 		...
 	}
@@ -46,7 +53,9 @@ class userAdmin {
 
 ````
 
-状态管理模块与视图组件是并非一对一的关系，所有状态管理模块共同组成了一个数据服务层，视图组件可以订阅任意模块的状态数据。下面以配合vue作实例说明
+> 状态管理模块与视图组件是并非一对一的关系，所有状态管理模块共同组成了一个数据服务层，视图组件可以订阅任意模块的状态数据。
+
+2、以vue作实例说明，让视图组件订阅上面模块定义的list状态字段，以及调起该模块的Action fetchList
 
 
 ````html
@@ -65,35 +74,30 @@ export default {
 		// 组件被初始化后this.list将被注入当前 userAdmin.list 的状态
 		list: 'userAdmin.list'
 	},
-	
 	data() {
 		return {
 			count: 0
 		};
 	},
-	
 	created(){
 		this.loadUserList();
 	}
-	
 	methods: {
 		async loadUserList() {
 			const result = await this.dispatch('userAdmin.fetchList');
 			// userAdmin模块的action：fetchList ，返回了{list, totalCount};
 			// 虽然totalCount没被保存到store
 			// totalCount仍然可以在 this.dispatch('userAdmin.fetchList') 返回的结果中使用
+			// 同时在state配置的订阅状态也会被注入
 			this.count = result.totalCount;
 		}
 	}
 }
 </script>
 ````
-
+3、下面是tunk在程序入口文件的初始化
 
 ````javascript
-
-// 应用入口文件tunk模块的初始化
-
 import Vue from 'vue';
 import tunk from "tunk";
 import tunkVue from "tunk-vue";
@@ -112,38 +116,25 @@ modules.keys().forEach((item) => {
 
 ````
 
+#### 要点
+1、一个模块对应着store状态树的一个节点，一个store状态节点仅能被对应的模块更新
 
+2、视图组件并没直接依赖tunk模块，而是相当于面向一个数据服务进行通信
 
-#### 一些特点
-1、tunk是一个面向对象的状态管理框架，你需要面向业务数据逻辑对象来设计状态管理模块类。
+3、你需要面向数据逻辑对象来设计状态管理模块类，将不同数据源的数据处理逻辑集中到状态管理模块类里，视图组件只负责内容展示和交互处理
 
-2、一个模块对应着store状态树的一个节点，一个store状态节点仅能被对应的模块更新
+4、视图组件可以轻松订阅不同模块的状态数据，也可以通过调起action的方法获得其返回的所有数据。
 
-> `@create`执行之后，模块类被重构及生成模块实例，store对象则生成相应的userAdmin节点，该节点的初始化数据来自该类的constructor内初始化的状态数据 `this.state`
+> 你不需要将所有用到的数据都视定义为状态数据，不会被复用的数据不应定义为状态 
 > 
-> 
-> > ````javascript
-> > store tree: {
-> >	 	userAdmin: {
-> >	 		list: []
-> >	 	}
-> > }
-> > ````
-> 
-> `@action`定义该类的方法为一个Action，这些Action所return的数据或用`this.dispatch`发送的数据，都会先跑tunk定义的中间件，最后可能会更新到store对象的userAdmin节点
-> 
-> `this.state` 仅允许在`constructor`内被同步初始化赋值，该类被实例化之后，`this.state` 二次赋值将报错 
-
-3、action只能更新在constructor内定义的状态字段，视图组件可以轻松订阅不同模块的状态数据，也可以通过调起action的方法获得其返回的所有数据。
-
-> 你可根据数据复用情况适当定义状态数据，如果一个action的处理结果不会被不同模块或视图组件或同一组件模块不同时间点重复利用，我们并不推荐你对这部分的数据定义为状态数据
-> 
-> 由于可获得action返回的所有内容，可以避免为了仅仅使用一次的数据做繁琐的状态数据定义与绑定操作
+> 由于可获得action返回的所有内容，你不需要为了使用一次的数据做繁琐的状态数据定义与绑定操作
 > 
 > 推荐你将所有的数据处理逻辑都放在在模块内，这样可以减轻视图层的复杂度，视图层仅负责内容展示及交互的逻辑处理
 > 
 
-### 二、一些基本概念
+5、tunk模块完全跟视图层无关，同一份tunk模块，可以直接配合不同的视图层的实现，譬如wap版开发完，复用tunk模块，只需要实现小程序的视图层即可完成小程序的开发
+
+### 二、基本概念
 
 #### Store 
 存储状态树数据，提供tunk内部读取和更新状态树数据的方法。
@@ -151,12 +142,12 @@ modules.keys().forEach((item) => {
 > 
 > 对常规业务开发是透明的，仅在扩展组件的开发中暴露store相关接口
 
-[开发自定义Store对象]()
+[开发自定义Store对象](https://github.com/tunkjs/tunk/blob/master/doc/%E5%BC%80%E5%8F%91%E8%87%AA%E5%AE%9A%E4%B9%89Store%E5%AF%B9%E8%B1%A1.md)
 
 #### State
 读取自store的状态快照，修改state将不会影响到store存储的数据
 
-> 初始state由模块的constructor内定义
+> 在constructor内赋给this.state的对象字段作为定义该模块的状态字段，后续的状态维护将不会再创建新状态字段，
 > 
 > 模块内部可通过`this.state`和`this.getState()`读取当前模块的state，向`this.getState()`传入参数，也可获得其他模块的state
 > 
@@ -218,17 +209,21 @@ modules.keys().forEach((item) => {
 
 
 ### 三、工作流程
-> * 视图层触发交互事件
-> * 触发Action执行
-> * Action执行结果进入中间件处理流程（dispatch也可进入中间件处理流程）
-> * 中间件处理完毕准备好更新到Store的状态数据
-> * 执行Store对象提供的方法 store.setState 完成更新Store状态
-> * 触发 hooks.store 钩子
-> * 与视图框架绑定的组件(tunk-react/tunk-vue)，利用hooks.store钩子去触发新状态快照注入到视图组件中
 
-<p style="text-align:center;">
+<div style="text-align:center;">
 <img src="https://github.com/tunkjs/tunk/blob/master/doc/tunk-flow.png?raw=true" alt="tunk flow">
-</p>
+</div>
+
+1. 视图层触发交互事件
+1. 交互事件回调发起Action执行
+1. 执行Action
+1. Action返回的结果或dispatch的数据，进入中间件处理流程
+1. 满足一定条件进入到内置store中间件后，调起setStore钩子
+1. setStore钩子执行Store对象提供的方法 store.setState 将定义为状态的字段数据存储到store，并返回action执行返回的所有数据
+1. 让视图框架跟tunk一起工作的组件（如tunk-vue）切入setStore钩子获得状态更新的通知
+1. 在切入setStore钩子的回调，获取到新状态并找到绑定了新状态相关字段的视图组件，将新状态数据逐一注入其中
+
+
 
 ### 四、tunk API
 
@@ -250,7 +245,7 @@ tunk.config({debug:true});
 ````
 
 #### @create([moduleName:String, options:Object])
-> create修饰器，用于创建和初始化模块
+> create修饰器，用于重构模块类及生成模块实例
 > 
 > **moduleName**：由于UgligyJS会将类名压缩，因此没使用tunk-loader的话需要传入需要创建的模块名
 > 
