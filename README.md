@@ -1,6 +1,6 @@
 
 <div style="text-align:center; margin-bottom:50px;">
-<img style="width: 200px;" src="https://github.com/tunkjs/gitbook-tunkjs/blob/master/img/logo.png?raw=true" alt="tunk logo">
+<img style="width: 200px;" src="https://github.com/tunkjs/gitbook-tunkjs/blob/master/img/logo1x.png?raw=true" alt="tunk logo">
 </div>
 
 # tunk
