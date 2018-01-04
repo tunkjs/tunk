@@ -24,8 +24,10 @@
   "scripts": {
     "test": "jasmine JASMINE_CONFIG_PATH=test/jasmine.json"
   },
-  "dependencies": {
-    "apply.js": "latest",
+  "devDependencies": {
     "jasmine": "^2.8.0"
+  },
+  "dependencies": {
+    "apply.js": "latest"
   }
 }
