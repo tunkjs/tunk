@@ -182,9 +182,9 @@ this.getState('myModule.key0.key1.0.key2'); // 1
 
 不同视图框架绑定组件的实现大同小异，具体可查看相关实例
 
-* [tunk-react](doc/plugins/tunk-react.md)
-* [tunk-vue](doc/plugins/tunk-vue.md)
-* [tunk-wechat](doc/plugins/tunk-wechat.md)
+* [tunk-react](https://github.com/tunkjs/gitbook-tunkjs/blob/master/doc/plugins/tunk-react.md)
+* [tunk-vue](https://github.com/tunkjs/gitbook-tunkjs/blob/master/doc/plugins/tunk-vue.md)
+* [tunk-wechat](https://github.com/tunkjs/gitbook-tunkjs/blob/master/doc/plugins/tunk-wechat.md)
 
 
 
