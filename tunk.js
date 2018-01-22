@@ -39,9 +39,13 @@
 					if (keys.indexOf(keysResult[i]) > -1)
 						toUpdate[keysResult[i]] = state[keysResult[i]];
 
-				return _assign(this.state[moduleName], _clone(toUpdate));
+				_assign(this.state[moduleName], _clone(toUpdate));
+				return toUpdate;
 
-			} else if (state) return (this.state[moduleName] = _assign({}, _clone(state)));
+			} else if (state) {
+				this.state[moduleName] = _assign({}, _clone(state));
+				return state
+			}
 		}
 	});
 
@@ -251,7 +255,7 @@
 		},
 
 		setState: function (newState, options) {
-			store.setState(options.moduleName, newState);
+			return store.setState(options.moduleName, newState);
 		},
 
 		getState: function (path, options) {
