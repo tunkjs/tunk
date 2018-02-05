@@ -10,11 +10,11 @@
     "react",
     "data center"
   ],
-  "main": "tunk.js",
+  "main": "main.js",
   "author": "steven chen <522702986@qq.com>",
   "license": "MIT",
   "files": [
-    "tunk.js"
+    "main.js"
   ],
   "repository": {
     "type": "git",
@@ -26,8 +26,5 @@
   },
   "devDependencies": {
     "jasmine": "^2.8.0"
-  },
-  "dependencies": {
-    "apply.js": "latest"
   }
 }

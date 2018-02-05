@@ -6,7 +6,6 @@ describe('tunk.use', function () {
             expect(utils.modules &&
                 utils.configs &&
                 utils.modules &&
-                utils.store &&
                 utils.hooks &&
                 utils.hook &&
                 utils.addMiddleware &&
@@ -15,70 +14,6 @@ describe('tunk.use', function () {
         });
 
 
-        describe('utils.store', function () {
-            it('store.setState("state1", {a: 1})', function () {
-                utils.store.setState('state1', { a: 1 });
-                expect(utils.store.getState('state1').a).toBe(1);
-            });
-            it('store.setState("state2", null)', function () {
-                function a() {
-                    utils.store.setState('state2', null);
-                    utils.store.getState('state2');
-                }
-                expect(a).toThrow();
-            });
-            it('store.setState("state1", {b: 1})', function () {
-                utils.store.setState('state1', { b: 1 });
-                expect(utils.store.getState('state1').a).toBe(1);
-            });
-        });
-
-        // xdescribe('utils.store', function () {
-        //     xdescribe('use custome store', function () {
-        //         var store = {};
-        //         function DataObj(val) { this.inner = val; }
-
-        //         tunk({
-        //             getState: function (key) {
-        //                 return store[key];
-        //             },
-        //             setState: function (key, val) {
-        //                 if (val && val.constructor === DataObj) store[key] = val;
-        //                 else store[key] = new DataObj(val);
-        //             }
-        //         });
-
-        //         xit('state in store', function () {
-        //             var mark;
-        //             utils.hook('store', function (origin) {
-        //                 return function (newState, options) {
-        //                     var result = origin.call(null, newState, options);
-        //                     if (!mark) expect(store.name.inner.a).toBe(99);
-        //                     mark = true;
-        //                     return result
-        //                 }
-        //             });
-        //             tunk.create('name', ((function () {
-        //                 function testModule() {
-        //                     this.state = { a: 99 };
-        //                 }
-        //                 testModule.prototype.action = tunk.createAction(function action(val) {
-        //                     return { b: val }
-        //                 });
-        //                 return testModule;
-        //             })());
-        //         })
-        //         xit('setState', function () {
-        //             utils.modules.name.action(88);
-        //             expect(store.name.inner.b).toBe(88);
-        //         });
-        //         xit('getState', function () {
-        //             expect(utils.modules.name.getState().inner.b).toBe(88);
-                    
-        //         });
-                
-        //     });
-        // });
 
         describe('utils.hook', function () {
             it('hook(compose)', function () {
@@ -114,17 +49,18 @@ describe('tunk.use', function () {
                 for (var x in utils.configs) delete utils.configs[x];
             });
             it('addMiddleware(arr) next next next', function () {
-                utils.addMiddleware([function (dispatch, next, options) {
+                utils.addMiddleware(function (dispatch, next, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
                     }
-                }, function (dispatch, next, options) {
+                });
+                utils.addMiddleware(function (dispatch, next, options) {
                     return function (r) {
                         num++;
                         return next(arguments);
                     }
-                }]);
+                });
                 tunk.create('name') ((function () {
                     function testModule() {
                         this.state = {};
@@ -137,17 +73,16 @@ describe('tunk.use', function () {
                 utils.modules.name.dispatch('name.action');
                 utils.modules.name.action();
                 utils.dispatchAction('name', 'action');
-                tunk.dispatch('name.action');
-                expect(num).toBe(8);
+                expect(num).toBe(6);
             });
             
 
             it('error in middleware', function () {
-                utils.addMiddleware([function (dispatch, next, options) {
+                utils.addMiddleware(function (dispatch, next, options) {
                     return function (r) {
                         if (r && r.a === 333) throw 'test errorrrrrrrrrrr';
                     }
-                }]);
+                });
                 tunk.create('name111') ((function () {
                     function testModule() {
                         this.state = { a: 1 };
