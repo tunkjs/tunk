@@ -113,8 +113,6 @@ _assign(hooks, {
             dispatch: dispatch
         });
 
-        if (!opts.island);
-
         protos.options = opts;
 
         _defineHiddenProps(protos, protos);
@@ -200,7 +198,12 @@ _assign(hooks, {
     },
 
     getState: function (path, options) {
-        if (!path) path = options.moduleName;
+        if (!path) path = [options.moduleName];
+        if(typeof path === 'string') path = path.split('.')
+        var moduleName = path[0];
+        if(moduleName !== options.moduleName && !modules[moduleName].options.isolate){
+            throw '[tunk]:you can only get state of an isolated module';
+        }
         return store.getState(path);
     }
 });
