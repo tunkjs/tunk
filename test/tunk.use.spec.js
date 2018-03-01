@@ -10,7 +10,7 @@ describe('tunk.use', function () {
                 utils.hook &&
                 utils.addMiddleware &&
                 utils.mixin &&
-                !!utils.dispatchAction).toBe(true);
+                !!utils.runAction).toBe(true);
         });
 
 
@@ -70,10 +70,9 @@ describe('tunk.use', function () {
                     });
                     return testModule;
                 })());
-                utils.modules.name.dispatch('name.action');
                 utils.modules.name.action();
-                utils.dispatchAction('name', 'action');
-                expect(num).toBe(6);
+                utils.runAction('name', 'action');
+                expect(num).toBe(4);
             });
             
 
@@ -92,7 +91,7 @@ describe('tunk.use', function () {
                     });
                     return testModule;
                 })());
-                function a (){ utils.modules.name111.dispatch('name111.action', 333); }
+                function a (){ utils.modules.name111.action(333); }
                 expect(a).toThrow();
 
             });

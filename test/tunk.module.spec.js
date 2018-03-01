@@ -43,52 +43,7 @@ describe('tunk.module ', function () {
             });
         });
 
-        describe('async action', function () {
-            let asyncModule;
-            it("call async action of other module", function (done) {
-                tunk.create('asyncModule2')((function () {
-                    function asyncModule() {
-                        this.state = { a: 0 };
-                    }
-                    asyncModule.constructor = asyncModule;
-                    asyncModule.prototype.myAsyncAction = tunk.Action(function action() {
-                        return new Promise((resolve, reject) => {
-                            setTimeout(() => {
-                                resolve(this.dispatch('asyncModule3.myAsyncAction').then(() => {
-                                    setTimeout(() => {
-                                        expect(utils.modules.asyncModule3.getState().a).toBe(20);
-                                        done();
-                                    });
-                                }));
-                            }, 100);
-                        });
-                    });
-                    return asyncModule;
-                })());
-                tunk.create('asyncModule3')((function () {
-                    function asyncModule() {
-                        this.state = {
-                            a: 0
-                        };
-                    }
-                    asyncModule.constructor = asyncModule;
-                    asyncModule.prototype.myAsyncAction = tunk.Action(function action() {
-                        return new Promise((resolve, reject) => {
-                            setTimeout(() => {
-                                resolve({ a: 20 });
-                            }, 100);
-                        });
-                    });
-                    return asyncModule;
-                })());
-
-                asyncModule = utils.modules.asyncModule2;
-                asyncModule.myAsyncAction();
-
-
-            });
-        });
-
+        
         describe('getState', function () {
             tunk.create('asyncModule4')((function () {
                 function asyncModule() {
@@ -97,17 +52,14 @@ describe('tunk.module ', function () {
                 asyncModule.constructor = asyncModule;
                 return asyncModule;
             })());
-            it("this.state", function () {
-                expect(utils.modules.asyncModule4.state.a.b.c[0].d.e[2].f).toBe(20);
-            });
             it("getState()", function () {
                 expect(utils.modules.asyncModule4.getState().a.b.c[0].d.e[2].f).toBe(20);
             });
-            it("getState('asyncModule4.a.b.c.2')", function () {
-                expect(utils.modules.asyncModule4.getState('asyncModule4.a.b.c.2')).toBe(2);
+            it("getState('a.b.c.2')", function () {
+                expect(utils.modules.asyncModule4.getState('a.b.c.2')).toBe(2);
             });
-            it("getState('asyncModule4.a.b.c.0.d.e.2.f')", function () {
-                expect(utils.modules.asyncModule4.getState('asyncModule4.a.b.c.0.d.e.2.f')).toBe(20);
+            it("getState('a.b.c.0.d.e.2.f')", function () {
+                expect(utils.modules.asyncModule4.getState('a.b.c.0.d.e.2.f')).toBe(20);
             });
         });
 

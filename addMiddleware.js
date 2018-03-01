@@ -14,7 +14,7 @@ function addMiddleware(middleware) {
 }
 
 addMiddleware.__reset = function () {
-    while (middlewares.length > 2) middlewares.pop();
+    while (middlewares.length > 1) middlewares.pop();
 }
 
 module.exports = addMiddleware;

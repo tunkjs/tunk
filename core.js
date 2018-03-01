@@ -20,8 +20,6 @@ function tunk(_store) {
     return tunk;
 }
 
-
-
 tunk.action = function (opts, property) {
     if (typeof property === 'string' && opts[property]) {
         opts[property].options = { isAction: true };
@@ -103,12 +101,15 @@ _assign(hooks, {
         var properties = _getProperties(module);
 
         for (var i = 0, l = properties.length; i < l; i++) if (protos[properties[i]]) {
-            protos[properties[i]] = hooks.override(moduleName, protos, properties[i], _assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
+            protos[properties[i]] = _override(moduleName, protos, properties[i], _assign({ actionName: properties[i] }, opts, protos[properties[i]].options || {}));
         }
 
         _assign(protos, mixins, protos, {
-            getState: function getState(key) {
-                return hooks.getState(key, opts);
+            getState: function getState(path) {
+                if (!path) path = [];
+                if(typeof path === 'string') path = path.split('.')
+                path.unshift(this.options.moduleName);
+                return hooks.getState(path, opts);
             },
             dispatch: dispatch
         });
@@ -120,19 +121,6 @@ _assign(hooks, {
         function dispatch() {
             return hooks.runMiddlewares(this, arguments, dispatch, dispatch.options || protos.options);
         }
-
-        Object.defineProperties(protos, {
-            'state': {
-                get: function () {
-                    return hooks.getState(opts.moduleName, opts);
-                },
-                set: function (state) {
-                    if (!this.__stateFreezed__) {
-                        hooks.setState(state, opts);
-                    } else throw '[tunk]:you could just initialize state by setting an object to state, please use dispatch instead.';
-                }
-            }
-        });
 
         return module;
     },
@@ -147,23 +135,15 @@ _assign(hooks, {
 
         modules[moduleName] = new module();
 
-        _defineHiddenProps(modules[moduleName], { __stateFreezed__: true });
-
         // 初次读取触发钩子
-        var defaultState = modules[moduleName].getState();
+        hooks.setState(modules[moduleName].state || {}, opts);
 
-        if (!defaultState || typeof defaultState !== 'object') {
-            throw '[tunk]:default state is required';
-        }
+        delete modules[moduleName].state;
+
         return modules[moduleName];
     },
 
-    override: function (moduleName, protos, protoName, options) {
-        if (protos[protoName].options && protos[protoName].options.isAction) {
-            return _createAction(moduleName, protoName, protos[protoName], options);
-        } else return protos[protoName];
-    },
-
+    
     callAction: function (originAction, args, module, options) {
         var result = apply(originAction, args, module);
         if (typeof result !== 'undefined') {
@@ -198,16 +178,16 @@ _assign(hooks, {
     },
 
     getState: function (path, options) {
-        if (!path) path = [options.moduleName];
-        if(typeof path === 'string') path = path.split('.')
-        var moduleName = path[0];
-        if(moduleName !== options.moduleName && !modules[moduleName].options.isolate){
-            throw '[tunk]:you can only get state of an isolated module';
-        }
+        
         return store.getState(path);
     }
 });
 
+function _override(moduleName, protos, protoName, options) {
+    if (protos[protoName].options && protos[protoName].options.isAction) {
+        return _createAction(moduleName, protoName, protos[protoName], options);
+    } else return protos[protoName];
+}
 
 function _createAction(moduleName, actionName, originAction, opts) {
     action.options = opts;
