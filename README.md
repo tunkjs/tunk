@@ -154,17 +154,6 @@ return 与 dispath后续的处理是一样的，区别是，return只能传递�
 
 ### 通信 
 
-#### 模块间通信 
-
-1. 通过`this.dispatch('moduleName.actionName');`调起其他模块的action及获取action处理结果
-2. 内置getState方法
-
-````javascript
-this.getState(); // 等同于 this.state，获得当前模块的状态
-//假设模块myModule的状态节点对象为{key0:{key1:[{key2:1}]}}
-// 获得其他模块的状态
-this.getState('myModule.key0.key1.0.key2'); // 1
-````
 
 #### 视图组件与模块间通信
 
@@ -203,6 +192,8 @@ this.getState('myModule.key0.key1.0.key2'); // 1
 ### 文档与实例
 
 [tunk](https://github.com/tunkjs/gitbook-tunkjs)
+
+[二十分钟快速入门](https://github.com/tunkjs/gitbook-tunkjs/blob/master/doc/intro/20%E5%88%86%E9%92%9F%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B.md)
 
 [examples](https://github.com/tunkjs/examples)
 
