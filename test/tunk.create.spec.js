@@ -74,6 +74,27 @@ describe('tunk.create', function () {
       });
       expect(Object.keys(utils.modules.name.options).length).toBe(1);
     });
+
+    it('tunk.Create("name")', function () {
+
+      tunk.Create('name', {
+        constructor: function () {
+          this.state = {}
+        }
+      });
+      expect(Object.keys(utils.modules.name.options).length).toBe(1);
+    });
+
+    it('tunk.Create("name") constructor () {}', function () {
+      var a = function(){
+        tunk.Create('name', {
+          constructor () {
+            this.state = {}
+          }
+        });
+      }
+      expect(a).toThrow();
+    });
     
   }]);
 })

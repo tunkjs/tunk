@@ -1,6 +1,6 @@
 {
   "name": "tunk",
-  "version": "3.0.2",
+  "version": "4.0.0",
   "description": "The action driven state management of application, which work as data center with vue,react or other frameworks",
   "keywords": [
     "tunk",
@@ -10,11 +10,11 @@
     "react",
     "data center"
   ],
-  "main": "tunk.js",
+  "main": "main.js",
   "author": "steven chen <522702986@qq.com>",
   "license": "MIT",
   "files": [
-    "tunk.js"
+    "main.js"
   ],
   "repository": {
     "type": "git",
@@ -24,8 +24,7 @@
   "scripts": {
     "test": "jasmine JASMINE_CONFIG_PATH=test/jasmine.json"
   },
-  "dependencies": {
-    "apply.js": "latest",
+  "devDependencies": {
     "jasmine": "^2.8.0"
   }
 }
